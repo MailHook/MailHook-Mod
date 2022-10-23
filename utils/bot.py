@@ -50,7 +50,7 @@ class ModBot(commands.Bot):
         if not self.debug:
            try:
             logging.info("Syncing slash commands...")
-            await self.tree.sync()
+            #await self.tree.sync()
             logging.info("Slash commands synced!")
            except Exception as e:
             logging.error("Failed to sync slash commands.")
@@ -66,7 +66,7 @@ async def main():
     intents.emojis_and_stickers = True
     intents.bans = True
     intents.webhooks = True
-    ext = ['mod', 'errors', 'config']
+    ext = ['mod', 'errors', 'config', 'level']
     async with ClientSession() as server_client:
      async with ModBot(debug=False, command_prefix="!", allowed_mentions=discord.AllowedMentions(everyone=False, roles=True, users=True, replied_user=True),  activity=discord.Game("What is love"), owner_ids=[542798185857286144, 321750582912221184], client=server_client, intents=intents, help_command=None, testing_guild_id=884470177176109056, initial_cogs=ext) as bot:
       token = os.getenv("DISCORD_TOKEN")

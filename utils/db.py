@@ -8,6 +8,8 @@ class Database():
         self.con.execute("CREATE TABLE IF NOT EXISTS reports (case_id INTEGER, guild_id INTEGER, user_id INTEGER, moderator_id INTEGER, reason TEXT, case_type TEXT, timestamp TEXT)")
         # server_config table
         self.con.execute("CREATE TABLE IF NOT EXISTS server_config (guild_id INTEGER, log_channel_id INTEGER, reports_channel_id INTEGER, role_id INTEGER, staff_role_id INTEGER)")
+        # level table
+        self.con.execute("CREATE TABLE IF NOT EXISTS levels (guild_id INTEGER, user_id INTEGER, level INTEGER, xp INTEGER)")
 
     ###########################################
     def add_report(self, case_id: int, guild_id: int, user_id: int, moderator_id: int, reason: str, case_type: str, timestamp: str):
@@ -62,3 +64,25 @@ class Database():
 
     def get_guild(self, guild_id: int):
         return self.con.execute("SELECT * FROM server_config WHERE guild_id = ?", (guild_id,)).fetchone()
+    ###########################################
+
+    def add_level(self, guild_id: int, user_id: int, level: int, xp: int):
+        self.con.execute("INSERT INTO levels VALUES (?, ?, ?, ?)", (guild_id, user_id, level, xp))
+        self.con.commit()
+
+    def get_level(self, guild_id: int, user_id: int):
+        return self.con.execute("SELECT * FROM levels WHERE guild_id = ? AND user_id = ?", (guild_id, user_id)).fetchone()
+
+    def update_level(self, guild_id: int, user_id: int, level: int):
+        self.con.execute("UPDATE levels SET level = ? WHERE guild_id = ? AND user_id = ?", (level, guild_id, user_id))
+        self.con.commit()
+
+    def show_all_levels(self, guild_id: int):
+        return self.con.execute("SELECT * FROM levels WHERE guild_id = ?", (guild_id,)).fetchall()
+    
+    def show_xp(self, guild_id: int, user_id: int):
+        return self.con.execute("SELECT * FROM levels WHERE guild_id = ? AND user_id = ?", (guild_id, user_id)).fetchone()
+
+    def update_xp(self, guild_id: int, user_id: int, level: int, xp: int):
+        self.con.execute("UPDATE levels SET level = ?, xp = ? WHERE guild_id = ? AND user_id = ?", (level, xp, guild_id, user_id))
+        self.con.commit()
