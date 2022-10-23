@@ -294,8 +294,10 @@ class Mod(commands.Cog):
     @app_commands.checks.has_permissions(manage_messages=True)
     async def clear(self, ctx, amount: int):
         try:
+            # reply 
+            await ctx.response.send_message("Clearing {} messages...".format(amount), ephemeral=True)
             await ctx.channel.purge(limit=amount)
-            await ctx.response.send_message("Deleted {} messages.".format(amount), ephemeral=True)
+            await ctx.followup.send("Cleared {} messages.".format(amount), ephemeral=True)
         except Exception as e:
             await ctx.response.send_message("An error occured: {}".format(e))
 

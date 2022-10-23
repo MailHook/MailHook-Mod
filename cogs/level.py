@@ -28,9 +28,12 @@ class Level(commands.Cog):
         self.bot = bot
         self.db = Database("levels.db")
         self.is_weekend = False
+        ############################
+        self.weekend_xp = 5
+        self.xp_per_message = 1
+        ############################
         self.max_level = 100
         self.max_xp = 100
-
 
     @commands.Cog.listener("on_message")
     async def on_message(self, message):
@@ -51,9 +54,9 @@ class Level(commands.Cog):
             xp = xp[3]
             # if it is the weekend, then give 2x xp
             if self.is_weekend:
-                xp += 2
+                xp += self.weekend_xp
             else:
-                xp += 1
+                xp += self.xp_per_message
 
             if user_id in no_xp_list:
                 return
@@ -64,25 +67,18 @@ class Level(commands.Cog):
             if xp >= self.max_xp:
                 level += 1
                 xp = 0
-                if level == 5:
-                    await message.channel.send(f"Congrats {message.author.mention}! You have reached level 5!")
-                elif level == 10:
-                    await message.channel.send(f"Congrats {message.author.mention}! You have reached level 10!")
-                elif level == 15:
-                    await message.channel.send(f"Congrats {message.author.mention}! You have reached level 15!")
-                elif level == 20:
-                    await message.channel.send(f"Congrats {message.author.mention}! You have reached level 20!")
+                if level == self.max_level:
+                    await message.channel.send(f"Congrats {message.author.mention}, you have reached max level!")
                 else:
-                    await message.channel.send(f"{message.author.mention} has leveled up to level {level}!")
+                 await message.channel.send(f"{message.author.mention} has leveled up to level {level}!", delete_after=10)
             self.db.update_xp(guild_id, user_id, level, xp)
             # add user to no_xp_list for 2 seconds so they don't get xp for spamming
             no_xp_list.append(user_id)
-            await asyncio.sleep(5)
+            await asyncio.sleep(2)
             no_xp_list.remove(user_id)
-            
 
-    # this is a task that runs every 5 minutes to check if it is the weekend
-    @tasks.loop(minutes=5)
+    # this is a task that runs everyone one day
+    @tasks.loop(hours=12)
     async def check_weekend(self):
         now = datetime.datetime.now()
         if now.weekday() == 5 or now.weekday() == 6:
