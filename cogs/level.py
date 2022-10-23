@@ -11,14 +11,10 @@ level_masters = [733536002563637298, 280464234972839936]
 def is_level_master():
  async def predicate(ctx: commands.Context):
     if ctx.author.id in level_masters:
-        print("Level master")
         return True
-    # if user has admin perms, then return True
     elif ctx.author.guild_permissions.administrator:
-        print("Admin")
         return True
     else:
-        print("Not level master")
         return False
  return commands.check(predicate)
 
@@ -113,7 +109,14 @@ class Level(commands.Cog):
             levels = sorted(levels, key=lambda x: x[2], reverse=True)
             embed = discord.Embed(title="Leaderboard", color=discord.Color.blue())
             for i in range(len(levels)):
-                embed.add_field(name=f"{i+1}. {self.bot.get_user(levels[i][1])}", value=f"Level: {levels[i][2]} XP: {levels[i][3]}", inline=False)
+                #embed.add_field(name=f"{i+1}. {self.bot.get_user(levels[i][1])}", value=f"Level: {levels[i][2]} XP: {levels[i][3]}", inline=False)
+                # show the highest level in the server and the lowest level in the server
+                if i == 0:
+                    highest_level = levels[i][2]
+                if i == len(levels) - 1:
+                    lowest_level = levels[i][2]
+                embed.add_field(name=f"{i+1}. {self.bot.get_user(levels[i][1])}", value=f"Level: {levels[i][2]}", inline=False)
+            embed.set_footer(text=f"Highest level: {highest_level} Lowest level: {lowest_level}")
             await ctx.send(embed=embed)
 
 
@@ -123,7 +126,7 @@ class Level(commands.Cog):
         if level > self.max_level:
             await ctx.send("This level is too high")
         else:
-            self.db.update_level(ctx.guild.id, member.id, level, 0)
+            self.db.update_level(ctx.guild.id, member.id, level)
             await ctx.send(f"{member.name} is now level {level}")
 
     @commands.hybrid_command()
@@ -133,7 +136,8 @@ class Level(commands.Cog):
         await ctx.send("Done!")
 
     @commands.hybrid_command(name="startdoublexp")
-    @commands.has_role(1033556803872624671)
+    #@commands.has_role(1033556803872624671)
+    @is_level_master()
     async def startdoublexp(self, ctx):
         self.is_weekend = True
         await ctx.send("Done!")

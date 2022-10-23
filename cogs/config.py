@@ -28,7 +28,6 @@ class Config(commands.Cog):
         role = discord.utils.get(ctx.guild.roles, id=data[3])
         role2 = discord.utils.get(ctx.guild.roles, id=data[4])
         txt = f"""
-        **Server Configuration**
 Logging Channel: <#{data[1]}>
 Report Channel: <#{data[2]}>
 Mute Role: {role.mention}
@@ -36,20 +35,28 @@ Staff Role: {role2.mention}
 To edit the configuration, run `/editconfig`
         """
         print(data)
-        await ctx.response.send_message(txt)
+        embed = discord.Embed(title="Server Configuration", description=txt, color=0x00ff00)
+        await ctx.response.send_message(embed=embed)
 
     @app_commands.command(name="editconfig", description="Edit the bot configuration")
     @app_commands.checks.has_permissions(manage_guild=True)
     async def editconfig(self, ctx, log_channel: discord.TextChannel = None, report_channel: discord.TextChannel = None, role: discord.Role = None, staff_role: discord.Role = None):
+        if log_channel is None and report_channel is None and role is None and staff_role is None:
+            await ctx.response.send_message("Please specify a configuration to edit.")
+            return
+        data = self.db.get_guild(ctx.guild.id)
+        if data is None:
+            await ctx.response.send_message("This server is not configured yet. Please run `/setup` to configure the bot.")
+            return
         if log_channel is not None:
-            self.db.edit_modlog_channel(ctx.guild.id, log_channel.id)
+            self.db.update_guild(ctx.guild.id, channel_id=log_channel.id)
         if report_channel is not None:
-            self.db.edit_reports_channel(ctx.guild.id, report_channel.id)
+            self.db.update_guild(ctx.guild.id, report_channel_id=report_channel.id)
         if role is not None:
-            self.db.edit_mute_role(ctx.guild.id, role.id)
+            self.db.update_guild(ctx.guild.id, role_id=role.id)
         if staff_role is not None:
-            self.db.edit_staff_role(ctx.guild.id, staff_role.id)
-        await ctx.response.send_message("Successfully edited the configuration.")
+            self.db.update_guild(ctx.guild.id, staff_role_id=staff_role.id)
+        await ctx.response.send_message("Configuration updated!")
 
     @app_commands.command(name="setup", description="Setup the bot")
     @app_commands.checks.has_permissions(manage_guild=True)
@@ -64,6 +71,12 @@ To edit the configuration, run `/editconfig`
         except Exception as e:
             print(e)
             await ctx.response.send_message("An error occurred while configuring the bot.")
+
+    @app_commands.command(name="resetconfig", description="Reset the bot configuration")
+    @app_commands.checks.has_permissions(manage_guild=True)
+    async def resetconfig(self, ctx):
+        self.db.delete_guild(ctx.guild.id)
+        await ctx.response.send_message("Successfully reset the configuration.")
 
 async def setup(bot):
     await bot.add_cog(Config(bot))

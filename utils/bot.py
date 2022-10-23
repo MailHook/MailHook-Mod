@@ -50,7 +50,7 @@ class ModBot(commands.Bot):
         if not self.debug:
            try:
             logging.info("Syncing slash commands...")
-            #await self.tree.sync()
+            await self.tree.sync()
             logging.info("Slash commands synced!")
            except Exception as e:
             logging.error("Failed to sync slash commands.")

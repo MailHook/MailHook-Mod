@@ -42,8 +42,18 @@ class Database():
         self.con.execute("DELETE FROM server_config WHERE guild_id = ?", (guild_id,))
         self.con.commit()
     
-    def update_guild(self, guild_id: int, channel_id: int, role_id: int, staff_role_id: int):
-        self.con.execute("UPDATE server_config SET channel_id = ?, role_id = ?, staff_role_id = ?, staff_role_id_2 = ? WHERE guild_id = ?", (channel_id, role_id, staff_role_id, guild_id))
+    def update_guild(self, guild_id: int, channel_id: int=None, report_channel_id: int=None, role_id: int=None, staff_role_id: int=None):
+        if channel_id:
+            self.edit_modlog_channel(guild_id, channel_id)
+        if report_channel_id:
+            self.edit_reports_channel(guild_id, report_channel_id)
+        if role_id:
+            self.edit_mute_role(guild_id, role_id)
+        if staff_role_id:
+            self.edit_staff_role(guild_id, staff_role_id)
+        # if all Not none then update all
+        if channel_id and report_channel_id and role_id and staff_role_id:
+            self.con.execute("UPDATE server_config SET channel_id = ?, reports_channel_id = ?, role_id = ?, staff_role_id = ? WHERE guild_id = ?", (channel_id, report_channel_id, role_id, staff_role_id, guild_id))
         self.con.commit()
 
     def edit_staff_role(self, guild_id: int, role_id: int):
@@ -51,7 +61,7 @@ class Database():
         self.con.commit()
 
     def edit_modlog_channel(self, guild_id: int, channel_id: int):
-        self.con.execute("UPDATE server_config SET channel_id = ? WHERE guild_id = ?", (channel_id, guild_id))
+        self.con.execute("UPDATE server_config SET log_channel_id = ? WHERE guild_id = ?", (channel_id, guild_id))
         self.con.commit()
 
     def edit_reports_channel(self, guild_id: int, channel_id: int):
@@ -86,3 +96,4 @@ class Database():
     def update_xp(self, guild_id: int, user_id: int, level: int, xp: int):
         self.con.execute("UPDATE levels SET level = ?, xp = ? WHERE guild_id = ? AND user_id = ?", (level, xp, guild_id, user_id))
         self.con.commit()
+    ###########################################
