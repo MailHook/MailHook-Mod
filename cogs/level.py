@@ -22,7 +22,7 @@ def is_level_master():
 class Level(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.db = Database("levels.db")
+        self.db = Database()
         self.is_weekend = False
         ############################
         self.weekend_xp = 5
@@ -30,6 +30,17 @@ class Level(commands.Cog):
         ############################
         self.max_level = 100
         self.max_xp = 100
+
+    # this is a task that runs everyone one day
+    @tasks.loop(hours=12)
+    async def check_weekend(self):
+        now = datetime.datetime.now()
+        if now.weekday() == 5 or now.weekday() == 6:
+            self.is_weekend = True
+            print("It is the weekend!")
+        else:
+            self.is_weekend = False
+            print("It is not the weekend!")
 
     @commands.Cog.listener("on_message")
     async def on_message(self, message):
@@ -73,17 +84,6 @@ class Level(commands.Cog):
             await asyncio.sleep(2)
             no_xp_list.remove(user_id)
 
-    # this is a task that runs everyone one day
-    @tasks.loop(hours=12)
-    async def check_weekend(self):
-        now = datetime.datetime.now()
-        if now.weekday() == 5 or now.weekday() == 6:
-            self.is_weekend = True
-            print("It is the weekend!")
-        else:
-            self.is_weekend = False
-            print("It is not the weekend!")
-
     @commands.Cog.listener("on_ready")
     async def on_ready(self):
         self.check_weekend.start()
@@ -102,26 +102,25 @@ class Level(commands.Cog):
 
     @commands.hybrid_command()
     async def leaderboard(self, ctx):
-        levels = self.db.show_all_levels(ctx.guild.id)
-        if levels is None:
-            await ctx.send("There are no levels in this server")
-        else:
-            levels = sorted(levels, key=lambda x: x[2], reverse=True)
-            embed = discord.Embed(title="Leaderboard", color=discord.Color.blue())
-            for i in range(len(levels)):
+        data = self.db.show_all_levels(ctx.guild.id)
+        embed = discord.Embed(title="Leaderboard", color=discord.Color.blue())
+        levels = sorted(data, key=lambda x: x[2], reverse=True)
+        for i in range(len(levels)):
                 #embed.add_field(name=f"{i+1}. {self.bot.get_user(levels[i][1])}", value=f"Level: {levels[i][2]} XP: {levels[i][3]}", inline=False)
                 # show the highest level in the server and the lowest level in the server
-                if i == 0:
+         if i is None:
+            embed.add_field(name=f"No levels", value=f"It looks like you got no levels", inline=False)
+         if i == 0:
                     highest_level = levels[i][2]
-                if i == len(levels) - 1:
+         if i == len(levels) - 1:
                     lowest_level = levels[i][2]
-                embed.add_field(name=f"{i+1}. {self.bot.get_user(levels[i][1])}", value=f"Level: {levels[i][2]}", inline=False)
-            embed.set_footer(text=f"Highest level: {highest_level} Lowest level: {lowest_level}")
-            await ctx.send(embed=embed)
+         embed.add_field(name=f"{i+1}. {self.bot.get_user(levels[i][1])}", value=f"Level: {levels[i][2]}", inline=False)
+         embed.set_footer(text=f"Highest level: {highest_level} Lowest level: {lowest_level}")
+        await ctx.send(embed=embed)
 
 
     @commands.hybrid_command()
-    @commands.has_role(1033556803872624671)
+    @is_level_master()
     async def set_level(self, ctx, member: discord.Member, level: int):
         if level > self.max_level:
             await ctx.send("This level is too high")
@@ -130,7 +129,7 @@ class Level(commands.Cog):
             await ctx.send(f"{member.name} is now level {level}")
 
     @commands.hybrid_command()
-    @commands.has_role(1033556803872624671)
+    @is_level_master()
     async def resetxp(self, ctx, member: discord.Member):
         self.db.update_xp(ctx.guild.id, member.id, 1, 0)
         await ctx.send("Done!")
@@ -141,6 +140,23 @@ class Level(commands.Cog):
     async def startdoublexp(self, ctx):
         self.is_weekend = True
         await ctx.send("Done!")
+
+    @commands.hybrid_command(name="stopdoublexp")
+    #@commands.has_role(1033556803872624671)
+    @is_level_master()
+    async def stopdoublexp(self, ctx):
+        self.is_weekend = False
+        await ctx.send("Done!")
+
+    @commands.hybrid_command()
+    @is_level_master()
+    async def level_help(self, ctx):
+        embed = discord.Embed(title="Level Help", color=discord.Color.blue())
+        embed.add_field(name="set_level", value="Sets the level of a user", inline=False)
+        embed.add_field(name="resetxp", value="Resets the xp of a user", inline=False)
+        embed.add_field(name="startdoublexp", value="Starts double xp", inline=False)
+        embed.add_field(name="stopdoublexp", value="Stops double xp", inline=False)
+        await ctx.send(embed=embed)
     
 async def setup(bot):
     await bot.add_cog(Level(bot))

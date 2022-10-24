@@ -13,7 +13,7 @@ import random
 class Mod(commands.Cog):
     def __init__(self, bot: ModBot):
             self.bot = bot
-            self.db = Database("logs.db")
+            self.db = Database()
      
     @app_commands.command(name="add-staff", description="Adds the staff role to the user.")
     @app_commands.checks.has_permissions(administrator=True)

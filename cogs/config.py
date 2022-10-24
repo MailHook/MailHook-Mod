@@ -16,7 +16,7 @@ from utils.db import Database
 class Config(commands.Cog):
     def __init__(self, bot: ModBot):
             self.bot = bot
-            self.db = Database("logs.db")
+            self.db = Database()
 
     @app_commands.command(name="config", description="Configure the bot")
     @app_commands.checks.has_permissions(manage_guild=True)

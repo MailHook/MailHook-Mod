@@ -1,6 +1,6 @@
 import sqlite3
 from .bot import ModBot
-
+#import mysql.connector as mysql
 
 class Database():
     def __init__(self, db_name="database.db"):
