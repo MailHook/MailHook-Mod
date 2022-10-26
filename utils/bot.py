@@ -10,7 +10,7 @@ load_dotenv()
 from typing import Dict, List, Optional
 
 import discord
-from discord.ext import commands, tasks
+from discord.ext import commands
 
 class ModBot(commands.Bot):
     def __init__(
@@ -61,7 +61,7 @@ class ModBot(commands.Bot):
 async def main():
     intents = discord.Intents.default()
     intents.members = True
-    intents.message_content = True
+    intents.message_content = False
     intents.emojis = True
     intents.emojis_and_stickers = True
     intents.bans = True

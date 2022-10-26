@@ -1,23 +1,13 @@
 import asyncio
 import datetime
+from msilib.schema import AppSearch
 from click import command
 import discord
 from discord.ext import commands, tasks
+from discord import app_commands
 from utils.db import Database
 
 no_xp_list = []
-level_masters = [733536002563637298, 280464234972839936]
-
-def is_level_master():
- async def predicate(ctx: commands.Context):
-    if ctx.author.id in level_masters:
-        return True
-    elif ctx.author.guild_permissions.administrator:
-        return True
-    else:
-        return False
- return commands.check(predicate)
-
 
 class Level(commands.Cog):
     def __init__(self, bot):
@@ -78,7 +68,8 @@ class Level(commands.Cog):
                     await message.channel.send(f"Congrats {message.author.mention}, you have reached max level!")
                 else:
                  await message.channel.send(f"{message.author.mention} has leveled up to level {level}!", delete_after=10)
-            self.db.update_xp(guild_id, user_id, level, xp)
+                # use update level
+            self.db.update_level(guild_id, user_id, level, xp)
             # add user to no_xp_list for 2 seconds so they don't get xp for spamming
             no_xp_list.append(user_id)
             await asyncio.sleep(2)
@@ -88,75 +79,69 @@ class Level(commands.Cog):
     async def on_ready(self):
         self.check_weekend.start()
 
-    @commands.hybrid_command()
-    async def level(self, ctx, member: discord.Member = None):
-        if member is None:
-            member = ctx.author
-        xp = self.db.show_xp(ctx.guild.id, member.id)
+    @app_commands.command(name="level", description="Shows your level")
+    async def level(self, ctx: discord.Integration):
+        guild_id = ctx.guild.id
+        user_id = ctx.user.id
+        xp = self.db.show_xp(guild_id, user_id)
         if xp is None:
-            await ctx.send("This user has no xp")
+            await ctx.response.send_message("You have not sent any messages yet!", ephemeral=True)
         else:
             level = xp[2]
             xp = xp[3]
-            await ctx.send(f"{member.name} is level {level} with {xp} xp")
+            await ctx.response.send_message(f"You are level {level} with {xp}/{self.max_xp} xp", ephemeral=True)
 
-    @commands.hybrid_command()
-    async def leaderboard(self, ctx):
-        data = self.db.show_all_levels(ctx.guild.id)
+    @app_commands.command(name="leaderboard", description="Shows the leaderboard")
+    async def leaderboard(self, ctx: discord.Integration):
+        guild_id = ctx.guild.id
+        users_2 = self.db.show_all_levels(guild_id)
+        # send an embed with the leaderboard and the users
         embed = discord.Embed(title="Leaderboard", color=discord.Color.blue())
-        levels = sorted(data, key=lambda x: x[2], reverse=True)
-        for i in range(len(levels)):
-                #embed.add_field(name=f"{i+1}. {self.bot.get_user(levels[i][1])}", value=f"Level: {levels[i][2]} XP: {levels[i][3]}", inline=False)
-                # show the highest level in the server and the lowest level in the server
-         if i is None:
-            embed.add_field(name=f"No levels", value=f"It looks like you got no levels", inline=False)
-         if i == 0:
-                    highest_level = levels[i][2]
-         if i == len(levels) - 1:
-                    lowest_level = levels[i][2]
-         embed.add_field(name=f"{i+1}. {self.bot.get_user(levels[i][1])}", value=f"Level: {levels[i][2]}", inline=False)
-         embed.set_footer(text=f"Highest level: {highest_level} Lowest level: {lowest_level}")
-        await ctx.send(embed=embed)
+        # highest level to lowest level in order
+        users = sorted(users_2, key=lambda x: x[2], reverse=True)
+        for user in users:
+            user_id = user[1]
+            level = user[2]
+            xp = user[3]
+            user = self.bot.get_user(user_id)
+            embed.add_field(name=user.name, value=f"Level: {level} | XP: {xp}/{self.max_xp}", inline=False)
+        await ctx.response.send_message(embed=embed, ephemeral=True)
 
+    @app_commands.command(name="setxp", description="Sets the xp for a user")
+    @app_commands.checks.has_permissions(manage_guild=True)
+    async def setxp(self, ctx: discord.Integration, user: discord.User, xp: int):
+        guild_id = ctx.guild.id
+        user_id = user.id
+        if xp > self.max_xp:
+            await ctx.response.send_message("You can't set xp higher than the max xp!", ephemeral=True)
+            return
+        self.db.update_xp(guild_id, user_id, 1, xp)
+        await ctx.response.send_message(f"{user} has been set to {xp} xp", ephemeral=True)
 
-    @commands.hybrid_command()
-    @is_level_master()
-    async def set_level(self, ctx, member: discord.Member, level: int):
+    @app_commands.command(name="setlevel", description="Sets the level for a user")
+    @app_commands.checks.has_permissions(manage_guild=True)
+    async def setlevel(self, ctx: discord.Integration, user: discord.User, level: int):
+        guild_id = ctx.guild.id
+        user_id = user.id
+
+        # check if is in the database
+        data = self.db.show_xp(guild_id, user_id)
+        if data is None:
+            await ctx.response.send_message("That user is not in the database!", ephemeral=True)
+            return
         if level > self.max_level:
-            await ctx.send("This level is too high")
-        else:
-            self.db.update_level(ctx.guild.id, member.id, level)
-            await ctx.send(f"{member.name} is now level {level}")
+            await ctx.response.send_message("You can't set level higher than the max level!", ephemeral=True)
+            return
+        self.db.update_level(guild_id, user_id, level)
+        await ctx.response.send_message(f"{user} has been set to level {level}", ephemeral=True)
 
-    @commands.hybrid_command()
-    @is_level_master()
-    async def resetxp(self, ctx, member: discord.Member):
-        self.db.update_xp(ctx.guild.id, member.id, 1, 0)
-        await ctx.send("Done!")
+    @app_commands.command(name="reset", description="Resets a user's xp and level")
+    @app_commands.checks.has_permissions(manage_guild=True)
+    async def reset(self, ctx: discord.Integration, user: discord.User):
+        user_id = user.id
+        # remove user from database
+        self.db.remove_user(user_id)
+        await ctx.response.send_message(f"{user} has been reset!", ephemeral=True)
 
-    @commands.hybrid_command(name="startdoublexp")
-    #@commands.has_role(1033556803872624671)
-    @is_level_master()
-    async def startdoublexp(self, ctx):
-        self.is_weekend = True
-        await ctx.send("Done!")
-
-    @commands.hybrid_command(name="stopdoublexp")
-    #@commands.has_role(1033556803872624671)
-    @is_level_master()
-    async def stopdoublexp(self, ctx):
-        self.is_weekend = False
-        await ctx.send("Done!")
-
-    @commands.hybrid_command()
-    @is_level_master()
-    async def level_help(self, ctx):
-        embed = discord.Embed(title="Level Help", color=discord.Color.blue())
-        embed.add_field(name="set_level", value="Sets the level of a user", inline=False)
-        embed.add_field(name="resetxp", value="Resets the xp of a user", inline=False)
-        embed.add_field(name="startdoublexp", value="Starts double xp", inline=False)
-        embed.add_field(name="stopdoublexp", value="Stops double xp", inline=False)
-        await ctx.send(embed=embed)
-    
 async def setup(bot):
     await bot.add_cog(Level(bot))

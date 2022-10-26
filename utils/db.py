@@ -74,6 +74,7 @@ class Database():
 
     def get_guild(self, guild_id: int):
         return self.con.execute("SELECT * FROM server_config WHERE guild_id = ?", (guild_id,)).fetchone()
+
     ###########################################
 
     def add_level(self, guild_id: int, user_id: int, level: int, xp: int):
@@ -83,17 +84,23 @@ class Database():
     def get_level(self, guild_id: int, user_id: int):
         return self.con.execute("SELECT * FROM levels WHERE guild_id = ? AND user_id = ?", (guild_id, user_id)).fetchone()
 
-    def update_level(self, guild_id: int, user_id: int, level: int):
-        self.con.execute("UPDATE levels SET level = ? WHERE guild_id = ? AND user_id = ?", (level, guild_id, user_id))
+    def update_level(self, guild_id: int, user_id: int, level: int, xp: int):   
+        self.con.execute("UPDATE levels SET level = ?, xp = ? WHERE guild_id = ? AND user_id = ?", (level, xp, guild_id, user_id))
         self.con.commit()
 
     def show_all_levels(self, guild_id: int):
+        # reload the database to get the latest data
+        self.con = sqlite3.connect("database.db")
         return self.con.execute("SELECT * FROM levels WHERE guild_id = ?", (guild_id,)).fetchall()
     
     def show_xp(self, guild_id: int, user_id: int):
         return self.con.execute("SELECT * FROM levels WHERE guild_id = ? AND user_id = ?", (guild_id, user_id)).fetchone()
 
-    def update_xp(self, guild_id: int, user_id: int, level: int, xp: int):
-        self.con.execute("UPDATE levels SET level = ?, xp = ? WHERE guild_id = ? AND user_id = ?", (level, xp, guild_id, user_id))
+    def update_xp(self, guild_id: int, user_id: int,  xp: int):
+        self.con.execute("UPDATE levels SET xp = ? WHERE guild_id = ? AND user_id = ?", (xp, guild_id, user_id))
         self.con.commit()
     ###########################################
+
+    def remove_user(self, user_id: int):
+        self.con.execute("DELETE FROM levels WHERE user_id = ?", (user_id,))
+        self.con.commit()
