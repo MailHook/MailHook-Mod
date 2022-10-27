@@ -1,11 +1,11 @@
 import asyncio
 import datetime
-from msilib.schema import AppSearch
-from click import command
+from typing import List
 import discord
 from discord.ext import commands, tasks
 from discord import app_commands
 from utils.db import Database
+from utils.embed import custom_embed
 
 no_xp_list = []
 
@@ -78,25 +78,38 @@ class Level(commands.Cog):
     @commands.Cog.listener("on_ready")
     async def on_ready(self):
         self.check_weekend.start()
-
-    @app_commands.command(name="level", description="Shows your level")
-    async def level(self, ctx: discord.Integration):
-        guild_id = ctx.guild.id
-        user_id = ctx.user.id
-        xp = self.db.show_xp(guild_id, user_id)
-        if xp is None:
-            await ctx.response.send_message("You have not sent any messages yet!", ephemeral=True)
+            
+    @app_commands.command(name="profile", description="Shows your profile")
+    async def profile(self, ctx: discord.Integration, user: discord.User = None):
+        # show the user's level, xp, and rank on the leaderboard
+        if user is None:
+            user = ctx.user
+        # check if user is a bot
+        if user.bot:
+            await ctx.response.send_message("Bots don't have levels!", ephemeral=True)
+            return
+        data = self.db.get_level(ctx.guild.id, user.id)
+        if data is None:
+            await ctx.response.send_message(f"{user.name} has not sent any messages yet!", ephemeral=True)
         else:
-            level = xp[2]
-            xp = xp[3]
-            await ctx.response.send_message(f"You are level {level} with {xp}/{self.max_xp} xp", ephemeral=True)
+            level = data[2]
+            xp = data[3]
+            all_levels = self.db.show_all_levels(ctx.guild.id)
+            # sort the levels and see where the user is
+            all_levels.sort(key=lambda x: x[3], reverse=True)
+            embed = discord.Embed(title=f"{user.name}'s Profile", color=discord.Color.blurple())
+            embed.add_field(name="Level", value=level)
+            embed.add_field(name="XP", value=f"{xp}/{self.max_xp}", inline=True)
+            embed.add_field(name="Rank", value=all_levels.index(data) + 1, inline=True)
+            embed.set_footer(text=f"Requested by {user.name}", icon_url=user.avatar.url)
+            await ctx.response.send_message(embed=embed, ephemeral=True)
 
     @app_commands.command(name="leaderboard", description="Shows the leaderboard")
     async def leaderboard(self, ctx: discord.Integration):
         guild_id = ctx.guild.id
         users_2 = self.db.show_all_levels(guild_id)
         # send an embed with the leaderboard and the users
-        embed = discord.Embed(title="Leaderboard", color=discord.Color.blue())
+        embed = discord.Embed(title="Leaderboard", color=discord.Color.blurple())
         # highest level to lowest level in order
         users = sorted(users_2, key=lambda x: x[2], reverse=True)
         for user in users:
@@ -105,6 +118,10 @@ class Level(commands.Cog):
             xp = user[3]
             user = self.bot.get_user(user_id)
             embed.add_field(name=user.name, value=f"Level: {level} | XP: {xp}/{self.max_xp}", inline=False)
+            # if too many fields, then break
+            if len(embed.fields) == 25:
+                break
+        embed.set_footer(text=f"Requested by {ctx.user.name}", icon_url=ctx.user.avatar.url)
         await ctx.response.send_message(embed=embed, ephemeral=True)
 
     @app_commands.command(name="setxp", description="Sets the xp for a user")
@@ -132,7 +149,7 @@ class Level(commands.Cog):
         if level > self.max_level:
             await ctx.response.send_message("You can't set level higher than the max level!", ephemeral=True)
             return
-        self.db.update_level(guild_id, user_id, level)
+        self.db.update_level(guild_id, user_id, level, 0)
         await ctx.response.send_message(f"{user} has been set to level {level}", ephemeral=True)
 
     @app_commands.command(name="reset", description="Resets a user's xp and level")

@@ -228,68 +228,6 @@ class Mod(commands.Cog):
         except Exception as e:
             await ctx.response.send_message("An error occured: {}".format(e))
 
-    @app_commands.command(name="quarantine", description="Quarantines a staff member.")
-    @app_commands.checks.has_permissions(administrator=True)
-    async def quarantine(self, ctx, user: discord.Member, *, reason: str=None):
-        try:
-            # make a random id for the case
-            case_id = random.randint(100000, 999999)
-            timestamp = datetime.datetime.utcnow().strftime("%d/%m/%Y %H:%M:%S")
-            print(timestamp)
-            self.db.add_report(case_id, ctx.user.id, user.id, ctx.user.id, reason, "quarantine", timestamp)
-            new_role = discord.utils.get(ctx.guild.roles, id=1028485135177359460)
-            txt = f"""
-            **Case ID:** {case_id}
-            **User:** {user.mention}
-            **Moderator:** {ctx.user}
-            **Reason:** {reason}
-            **Type:** Quarantine
-            **Date:** {timestamp}
-            To edit this case, use `/edit-report {case_id} <reason>`
-            """
-            embed = discord.Embed(title="Quarantine", description=txt, color=0x00ff00)
-            channel = self.bot.get_channel(1033438416987242529)
-            # remove all other roles
-            for role in user.roles:
-                if role != ctx.guild.default_role:
-                    await user.remove_roles(role)
-            await user.add_roles(new_role)
-            await channel.send(embed=embed)
-            await ctx.response.send_message("Quarantined {}.".format(user.display_name), ephemeral=True)
-        except Exception as e:
-            await ctx.response.send_message("An error occured: {}".format(e))
-
-    @app_commands.command(name="unquarantine", description="Unquarantines a staff member.")
-    @app_commands.checks.has_permissions(administrator=True)
-    async def unquarantine(self, ctx, user: discord.Member, *, reason: str=None):
-        try:
-            # make a random id for the case
-            case_id = random.randint(100000, 999999)
-            timestamp = datetime.datetime.utcnow().strftime("%d/%m/%Y %H:%M:%S")
-            print(timestamp)
-            self.db.add_report(case_id, ctx.user.id, user.id, ctx.user.id, reason, "unquarantine", timestamp)
-            new_role = discord.utils.get(ctx.guild.roles, id=1028485135177359460)
-            txt = f"""
-            **Case ID:** {case_id}
-            **User:** {user.mention}
-            **Moderator:** {ctx.user}
-            **Reason:** {reason}
-            **Type:** Unquarantine
-            **Date:** {timestamp}
-            To edit this case, use `/edit-report {case_id} <reason>`
-            """
-            embed = discord.Embed(title="Unquarantine", description=txt, color=0x00ff00)
-            channel = self.bot.get_channel(1033438416987242529)
-            await user.remove_roles(new_role)
-            # add member and staff roles
-            member_role = discord.utils.get(ctx.guild.roles, id=1025834769541505256)
-            staff_role = discord.utils.get(ctx.guild.roles, id=1033325362421174284)
-            await user.add_roles(member_role, staff_role)
-            await channel.send(embed=embed)
-            await ctx.response.send_message("Unquarantined {}.".format(user.display_name), ephemeral=True)
-        except Exception as e:
-            await ctx.response.send_message("An error occured: {}".format(e))
-
     @app_commands.command(name="clear", description="deletes a certain amount of messages.")
     @app_commands.checks.has_permissions(manage_messages=True)
     async def clear(self, ctx, amount: int):
@@ -371,7 +309,6 @@ class Mod(commands.Cog):
             embed = discord.Embed(title="Cases", description=txt, color=0x00ff00)
             await ctx.response.send_message(embed=embed)
         except Exception as e:
-            print(e)
             await ctx.response.send_message("An error occured: {}".format(e))
 
     @app_commands.command(name="help", description="Shows this message.")
