@@ -62,7 +62,7 @@ class Level(commands.Cog):
             _bar = await self.level_core.xp_bar(xp)
             currtent_xp = f"{xp}/{self.max_xp}"
             embed.add_field(name="XP", value=f"{_bar} {currtent_xp}", inline=False)
-            embed.set_footer(text=f"Requested by {user.name}", icon_url=user.avatar.url)
+            embed.set_footer(text=f"Requested by {ctx.user.name}", icon_url=ctx.user.avatar.url)
             await ctx.response.send_message(embed=embed, ephemeral=True)
 
     @app_commands.command(name="leaderboard", description="Shows the leaderboard")
