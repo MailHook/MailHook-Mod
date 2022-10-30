@@ -171,6 +171,17 @@ Case Number: {case_number}
         embed = custom_embed(title="Unban", description=txt, color=discord.Color.green())
         await channel.send(embeds=[embed])
 
+    @app_commands.command(name="clear", description="Clears a certain amount of messages.")
+    @commands.has_permissions(manage_messages=True)
+    async def clear(self, ctx, amount: int):
+        await ctx.response.defer()
+        if self.db.get_config(ctx.guild.id) is None:
+            return await ctx.response.send_message("Your server is not setup please run `/setup`", ephemeral=True)
+        if amount > 100:
+            return await ctx.response.send_message("You can only clear 100 messages at a time.", ephemeral=True)
+        await ctx.channel.purge(limit=amount)
+        ctx.response.is_done()
+
     # case command
     @app_commands.command(name="case", description="Get a case.")
     @commands.has_permissions(manage_messages=True)
