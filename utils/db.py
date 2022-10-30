@@ -61,6 +61,14 @@ class Database():
         self.con.execute(f"INSERT INTO roles VALUES (?, ?, ?)", (guild_id, role_id, level))
         self.con.commit()
 
+    def delete_role(self, guild_id: int, role_id: int=None, level: int=None):
+        # if role_id was not provided, from the level, get the role_id and delete it
+        if role_id is None:
+            self.con.execute("DELETE FROM roles WHERE guild_id = ? AND level = ?", (guild_id, level))
+        else:
+            self.con.execute("DELETE FROM roles WHERE guild_id = ? AND role_id = ?", (guild_id, role_id))
+        self.con.commit()
+
     def get_roles(self, guild_id: int):
         return self.con.execute("SELECT * FROM roles WHERE guild_id = ?", (guild_id,)).fetchall()
 

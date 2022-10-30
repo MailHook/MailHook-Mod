@@ -100,8 +100,38 @@ class Level(commands.Cog):
         if level > self.max_level:
             await ctx.response.send_message("You can't set a role higher than the max level!", ephemeral=True)
             return
+        # check if role is already in the database
+        data = self.db.get_role_by_level(ctx.guild.id, level)
+        if data is not None:
+            await ctx.response.send_message("That level already has a role!", ephemeral=True)
+            return
         self.db.add_role(ctx.guild.id, role.id, level)
         await ctx.response.send_message(f"Level {level} role has been set to {role.mention}", ephemeral=True)
+
+    @app_commands.command(name="get-level-roles", description="Gets the level roles")
+    @app_commands.checks.has_permissions(manage_guild=True)
+    async def get_level_roles(self, ctx: discord.Integration):
+        data = self.db.get_roles(ctx.guild.id)
+        if data is None:
+            await ctx.response.send_message("There are no level roles!", ephemeral=True)
+            return
+        embed = discord.Embed(title="Level Roles", color=discord.Color.blurple())
+        for role in data:
+            embed.add_field(name=f"Level {role[2]}", value=f"<@&{role[1]}>", inline=False)
+        await ctx.response.send_message(embed=embed, ephemeral=True)
+
+    @app_commands.command(name="remove-level-role", description="Removes a level role")
+    @app_commands.checks.has_permissions(manage_guild=True)
+    async def remove_level_role(self, ctx: discord.Integration, role: discord.Role=None, level: int=None):
+        if role is None:
+            self.db.delete_role(ctx.guild.id, None, level)
+            await ctx.response.send_message(f"Level {level} role has been removed!", ephemeral=True)
+        elif level is None:
+            self.db.delete_role(ctx.guild.id, role.id, None)
+            await ctx.response.send_message(f"{role.mention} role has been removed!", ephemeral=True)
+        else:
+            self.db.delete_role(ctx.guild.id, role.id, level)
+            await ctx.response.send_message(f"{role.mention} has been removed!", ephemeral=True)
 
 async def setup(bot):
     await bot.add_cog(Level(bot))
