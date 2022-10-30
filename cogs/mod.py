@@ -1,7 +1,10 @@
+import asyncio
 import discord
 import datetime
 import os
 from dotenv import load_dotenv
+
+from utils.embed import custom_embed
 load_dotenv()
 
 from discord.ext import commands
@@ -9,336 +12,238 @@ from utils.bot import ModBot
 from discord import app_commands
 from utils.db import Database
 import random
+import time
+
+def time_converter(time):
+    pos = ["s", "m", "h", "d"]
+    time_dict = {"s": 1, "m": 60, "h": 3600, "d": 3600*24}
+    unit = time[-1]
+    if unit not in pos:
+        return -1
+    try:
+        val = int(time[:-1])
+    except:
+        return -2
+    return val * time_dict[unit]
 
 class Mod(commands.Cog):
     def __init__(self, bot: ModBot):
             self.bot = bot
             self.db = Database()
      
-    @app_commands.command(name="add-staff", description="Adds the staff role to the user.")
-    @app_commands.checks.has_permissions(administrator=True)
-    async def staff(self, ctx, user: discord.Member):
+    @app_commands.command(name="warn", description="Warns a user.")
+    @commands.has_permissions(manage_messages=True)
+    async def warn(self, ctx, member: discord.Member, *, reason: str):
+        if self.db.get_config(ctx.guild.id) is None:
+            return await ctx.response.send_message("Your server is not setup please run `/setup`", ephemeral=True)
+        case_number = random.randint(100000, 999999)
+        # check if the user is staff with the highest role
+        if member.top_role >= ctx.user.top_role:
+            return await ctx.response.send_message("You cannot warn this user.", ephemeral=True)
+        if member == ctx.user:
+            return await ctx.response.send_message("You cannot warn yourself.", ephemeral=True)
         try:
-         server_data = self.db.get_guild(ctx.guild.id)
-         if server_data is None:
-            await ctx.response.send_message("This server is not configured yet. Please run `/setup` to configure the bot.")
-            return
-         staff_role = discord.utils.get(ctx.guild.roles, id=server_data[4])
-         staff_traniee_role = discord.utils.get(ctx.guild.roles, id=1033324272434810890)
-         await user.add_roles(staff_role)
-         await user.add_roles(staff_traniee_role)
-         channel = self.bot.get_channel(server_data[2])
-         embed = discord.Embed(title="Staff Role Added", description=f"You have been added to the staff team, If you need any help please dm a Mod.", color=0x00ff00)
-         await channel.send(content=f"{user.mention}", embed=embed)
-         await ctx.response.send_message("Staff role added to user.", ephemeral=True)
-        except Exception as e:
-         await ctx.response.send_message("An error occured: {}".format(e))
-
-    @app_commands.command(name="remove-staff", description="Removes the staff role from the user.")
-    @app_commands.checks.has_permissions(administrator=True)
-    async def remove_staff(self, ctx, user: discord.Member):
-       try:
-        server_data = self.db.get_guild(ctx.guild.id)
-        if server_data is None:
-            await ctx.response.send_message("This server is not configured yet. Please run `/setup` to configure the bot.")
-            return
-        staff_role = discord.utils.get(ctx.guild.roles, id=server_data[4])
-        staff_traniee_role = discord.utils.get(ctx.guild.roles, id=1033324272434810890)
-        await user.remove_roles(staff_role)
-        await user.remove_roles(staff_traniee_role)
-        embed = discord.Embed(title="You have been removed from the staff team!", description="You have been removed from the staff team of the {} discord server. If you have any questions, please ask a staff member.".format(ctx.guild.name), color=0x00ff00)
-        new_dm = await user.create_dm()
-        await new_dm.send(embed=embed)
-        await ctx.response.send_message("Removed the staff role from the {}.".format(user.display_name))
-       except Exception as e:
-        await ctx.response.send_message("An error occured: {}".format(e))
-
-    @app_commands.command(name="mute", description="Mutes the user.")
-    @app_commands.checks.has_permissions(manage_messages=True)
-    async def mute(self, ctx, user: discord.Member, *, reason: str):
-        try:
-            server_data = self.db.get_guild(ctx.guild.id)
-            if server_data is None:
-                await ctx.response.send_message("You need to set up the server first. Use `/setup` to set up the server.", ephemeral=True)
-                return
-            muted_role = discord.utils.get(ctx.guild.roles, id=server_data[3])
-            # make a random id for the case
-            case_id = random.randint(100000, 999999)
-            timestamp = datetime.datetime.utcnow().strftime("%d/%m/%Y %H:%M:%S")
-            print(timestamp)
-            self.db.add_report(case_id, ctx.user.id, user.id, ctx.user.id, reason, "mute", timestamp)
-            await user.add_roles(muted_role)
-            try:
-             embed = discord.Embed(title="You have been muted!", description="You have been muted in the {} discord server. If you have any questions, please dm MailHook".format(ctx.guild.name), color=0x00ff00)
-             new_dm = await user.create_dm()
-             await new_dm.send(embed=embed)
-            except:
-                pass
-            # send the embed to the channel
             txt = f"""
-            **Case ID:** {case_id}
-            **User:** {user.mention}
-            **Moderator:** {ctx.user}
-            **Reason:** {reason}
-            **Type:** Mute
-            **Date:** {timestamp}
-            To edit this case, use `/edit-report {case_id} <reason>`
+Hello, {member.mention}!, You have been warned in {ctx.guild.name} for {reason}, 
+
+Please read the rules and try to follow them next time.
+
+Case Number: {case_number}
             """
-            embed = discord.Embed(title="Mute", description=txt, color=0x00ff00)
-            channel = self.bot.get_channel(server_data[2])
-            await channel.send(embed=embed)
+            await member.send(txt)
+        except:
+            pass
+        time_1 = datetime.datetime.now()
+        time_2 = f"<t:{int(time.mktime(time_1.timetuple()))}>"
+        txt = f"**Case:** {case_number}\n**User:** {member.mention}\n**Moderator:** {ctx.user.mention}\n**Reason:** {reason}\n**Type:** Warn\n**Date:** {time_2}"
+        embed = custom_embed(title="Warn", description=txt, color=discord.Color.green())
+        channel = self.bot.get_channel(self.db.get_config(ctx.guild.id)[1])
+        await channel.send(embeds=[embed])
+        self.db.add_case(case_number, ctx.guild.id, member.id, ctx.user.id, reason, "warn", time_1)
+        await ctx.response.send_message("Warned user.", ephemeral=True)
 
-            await ctx.response.send_message("Muted {}.".format(user.display_name), ephemeral=True)
-        except Exception as e:
-            await ctx.response.send_message("An error occured: {}".format(e))
-
-    @app_commands.command(name="unmute", description="Unmutes the user.")
-    @app_commands.checks.has_permissions(manage_messages=True)
-    async def unmute(self, ctx, user: discord.Member):
+    @app_commands.command(name="kick", description="Kicks a user.")
+    @commands.has_permissions(kick_members=True)
+    async def kick(self, ctx, member: discord.Member, *, reason: str):
+        if self.db.get_config(ctx.guild.id) is None:
+            return await ctx.response.send_message("Your server is not setup please run `/setup`", ephemeral=True)
+        case_number = random.randint(100000, 999999)
+        if member.top_role >= ctx.user.top_role:
+            return await ctx.response.send_message("You cannot kick this user.", ephemeral=True)
+        if member == ctx.user:
+            return await ctx.response.send_message("You cannot kick yourself.", ephemeral=True)
         try:
-            server_data = self.db.get_guild(ctx.guild.id)
-            if server_data is None:
-                await ctx.response.send_message("You need to set up the server first. Use `/setup` to set up the server.", ephemeral=True)
-                return
-            muted_role = discord.utils.get(ctx.guild.roles, id=server_data[3])
-            await user.remove_roles(muted_role)
-            try:
-             embed = discord.Embed(title="You have been unmuted!", description="You have been unmuted in the {} discord server. If you have any questions, please dm MailHook".format(ctx.guild.name), color=0x00ff00)
-             new_dm = await user.create_dm()
-             await new_dm.send(embed=embed)
-            except:
-                pass
             txt = f"""
-            **Case ID:** None
-            **User:** {user.mention}
-            **Moderator:** {ctx.user}
-            **Reason:** None
-            """
-            embed = discord.Embed(title="Unmute", description=txt, color=0x00ff00)
-            channel = self.bot.get_channel(server_data[2])
-            await channel.send(embed=embed)
-            await ctx.response.send_message("Unmuted {}.".format(user.display_name), ephemeral=True)
-        except Exception as e:
-            await ctx.response.send_message("An error occured: {}".format(e))
+Hello, {member.mention}!, You have been kicked in {ctx.guild.name} for {reason}, Please read the rules and try to follow them next time.
 
-    @app_commands.command(name="ban", description="Bans the user.")
-    @app_commands.checks.has_permissions(ban_members=True)
-    async def ban(self, ctx, user: discord.Member, *, reason: str):
+Case Number: {case_number}
+            """
+            await member.send(txt)
+        except:
+            pass
+        time_1 = datetime.datetime.now()
+        time_2 = f"<t:{int(time.mktime(time_1.timetuple()))}>"
+        txt = f"**Case:** {case_number}\n**User:** {member.mention}\n**Moderator:** {ctx.user.mention}\n**Reason:** {reason}\n**Type:** Kick\n**Date:** {time_2}"
+        embed = custom_embed(title="Kick", description=txt, color=discord.Color.green())
+        channel = self.bot.get_channel(self.db.get_config(ctx.guild.id)[1])
+        await channel.send(embeds=[embed])
+        self.db.add_case(case_number, ctx.guild.id, member.id, ctx.user.id, reason, "kick", time_1)
+        await member.kick(reason=reason)
+        await ctx.response.send_message("Kicked user.", ephemeral=True)
+
+    @app_commands.command(name="ban", description="Bans a user.")
+    @commands.has_permissions(ban_members=True)
+    async def ban(self, ctx, member: discord.Member, *, reason: str):
+        if self.db.get_config(ctx.guild.id) is None:
+            return await ctx.response.send_message("Your server is not setup please run `/setup`", ephemeral=True)
+        case_number = random.randint(100000, 999999)
+        if member.top_role >= ctx.user.top_role:
+            return await ctx.response.send_message("You cannot ban this user.", ephemeral=True)
+        if member == ctx.user:
+            return await ctx.response.send_message("You cannot ban yourself.", ephemeral=True)
         try:
-            # make a random id for the case
-            case_id = random.randint(100000, 999999)
-            timestamp = datetime.datetime.utcnow().strftime("%d/%m/%Y %H:%M:%S")
-            print(timestamp)
-            server_data = self.db.get_guild(ctx.guild.id)
-            if server_data is None:
-                await ctx.response.send_message("You need to set up the server first. Use `/setup` to set up the server.", ephemeral=True)
-                return
-            self.db.add_report(case_id, ctx.user.id, user.id, ctx.user.id, reason, "ban", timestamp)
-            try:
-             embed = discord.Embed(title="You have been banned!", description="You have been banned from the {} discord server.".format(ctx.guild.name), color=0x00ff00)
-             new_dm = await user.create_dm()
-             await new_dm.send(embed=embed)
-            except:
-                pass
             txt = f"""
-            **Case ID:** {case_id}
-            **User:** {user.mention}
-            **Moderator:** {ctx.user}
-            **Reason:** {reason}
-            **Type:** Ban
-            **Date:** {timestamp}
-            To edit this case, use `/edit-report {case_id} <reason>`
-            """
-            embed = discord.Embed(title="Ban", description=txt, color=0x00ff00)
-            channel = self.bot.get_channel(server_data[2])
-            await channel.send(embed=embed)
-            await user.ban(reason=reason)
-            await ctx.response.send_message("Banned {}.".format(user.display_name), ephemeral=True)
-        except Exception as e:
-            await ctx.response.send_message("An error occured: {}".format(e))
+Hello, {member.mention}!, You have been banned in {ctx.guild.name} for {reason}, Please read the rules and try to follow them next time.
 
-    @app_commands.command(name="kick", description="Kicks the user.")
-    @app_commands.checks.has_permissions(kick_members=True)
-    async def kick(self, ctx, user: discord.Member, *, reason: str):
+Case Number: {case_number}
+            """
+            await member.send(txt)
+        except:
+            pass
+        time_1 = datetime.datetime.now()
+        time_2 = f"<t:{int(time.mktime(time_1.timetuple()))}>"
+        txt = f"**Case:** {case_number}\n**User:** {member.mention}\n**Moderator:** {ctx.user.mention}\n**Reason:** {reason}\n**Type:** Ban\n**Date:** {time_2}"
+        embed = custom_embed(title="Ban", description=txt, color=discord.Color.green())
+        channel = self.bot.get_channel(self.db.get_config(ctx.guild.id)[1])
+        await channel.send(embeds=[embed])
+        self.db.add_case(case_number, ctx.guild.id, member.id, ctx.user.id, reason, "ban", time_1)
+        await member.ban(reason=reason)
+        await ctx.response.send_message("Banned user.", ephemeral=True)
+
+    @app_commands.command(name="unban", description="Unbans a user.")
+    @commands.has_permissions(ban_members=True)
+    async def unban(self, ctx, member_id: str, *, reason: str):
+        if self.db.get_config(ctx.guild.id) is None:
+            return await ctx.response.send_message("Your server is not setup please run `/setup`", ephemeral=True)
+        case_number = random.randint(100000, 999999)
+        member = await self.bot.fetch_user(member_id)
+        time_1 = datetime.datetime.now()
+        time_2 = f"<t:{int(time.mktime(time_1.timetuple()))}>"
+        txt = f"**Case:** {case_number}\n**User:** {member.mention}\n**Moderator:** {ctx.user.mention}\n**Reason:** {reason}\n**Type:** Unban\n**Date:** {time_2}"
+        embed = custom_embed(title="Unban", description=txt, color=discord.Color.green())
+        channel = self.bot.get_channel(self.db.get_config(ctx.guild.id)[1])
+        await channel.send(embeds=[embed])
+        self.db.add_case(case_number, ctx.guild.id, member.id, ctx.user.id, reason, "unban", time_1)
+        await ctx.guild.unban(member, reason=reason)
+        await ctx.response.send_message("Unbanned user.", ephemeral=True)
+
+    @app_commands.command(name="temp-ban", description="Temporarily bans a user.")
+    @commands.has_permissions(ban_members=True)
+    async def temp_ban(self, ctx, member: discord.Member, time_: str, *, reason: str):
+        if self.db.get_config(ctx.guild.id) is None:
+            return await ctx.response.send_message("Your server is not setup please run `/setup`", ephemeral=True)
+        case_number = random.randint(100000, 999999)
+        if member.top_role >= ctx.user.top_role:
+            return await ctx.response.send_message("You cannot ban this user.", ephemeral=True)
+        if member == ctx.user:
+            return await ctx.response.send_message("You cannot ban yourself.", ephemeral=True)
         try:
-            # make a random id for the case
-            case_id = random.randint(100000, 999999)
-            timestamp = datetime.datetime.utcnow().strftime("%d/%m/%Y %H:%M:%S")
-            print(timestamp)
-            server_data = self.db.get_guild(ctx.guild.id)
-            if server_data is None:
-                await ctx.response.send_message("You need to set up the server first. Use `/setup` to set up the server.", ephemeral=True)
-                return
-            self.db.add_report(case_id, ctx.user.id, user.id, ctx.user.id, reason, "kick", timestamp)
-            try:
-             embed = discord.Embed(title="You have been kicked!", description="You have been kicked from the {} discord server.".format(ctx.guild.name), color=0x00ff00)
-             new_dm = await user.create_dm()
-             await new_dm.send(embed=embed)
-            except:
-                pass
             txt = f"""
-            **Case ID:** {case_id}
-            **User:** {user.mention}
-            **Moderator:** {ctx.user}
-            **Reason:** {reason}
-            **Type:** Kick
-            **Date:** {timestamp}
-            To edit this case, use `/edit-report {case_id} <reason>`
-            """
-            embed = discord.Embed(title="Kick", description=txt, color=0x00ff00)
-            channel = self.bot.get_channel(server_data[2])
-            await channel.send(embed=embed)
-            await user.kick(reason=reason)
-            await ctx.response.send_message("Kicked {}.".format(user.display_name), ephemeral=True)
-        except Exception as e:
-            await ctx.response.send_message("An error occured: {}".format(e))
+Hello, {member.mention}!, You have been banned in {ctx.guild.name} for {reason} for {time_}, Please read the rules and try to follow them next time.
 
-    @app_commands.command(name="warn", description="Warns the user.")
-    @app_commands.checks.has_permissions(manage_messages=True)
-    async def warn(self, ctx, user: discord.Member, *, reason: str):
+Case Number: {case_number}
+            """
+            await member.send(txt)
+        except:
+            pass
+        time_1 = datetime.datetime.now()
+        time_2 = f"<t:{int(time.mktime(time_1.timetuple()))}>"
+        txt = f"**Case:** {case_number}\n**User:** {member.mention}\n**Moderator:** {ctx.user.mention}\n**Reason:** {reason}\n**Type:** Temp Ban\n**Date:** {time_2}"
+        embed = custom_embed(title="Temp Ban", description=txt, color=discord.Color.green())
+        channel = self.bot.get_channel(self.db.get_config(ctx.guild.id)[1])
+        await channel.send(embeds=[embed])
+        self.db.add_case(case_number, ctx.guild.id, member.id, ctx.user.id, reason, "temp-ban", time_1)
+        await member.ban(reason=reason)
+        await ctx.response.send_message("Temporarily banned user.", ephemeral=True)
+        await asyncio.sleep(time_converter(time_))
+        await ctx.guild.unban(member, reason="Temp ban expired.")
+        txt = f"**Case:** {case_number}\n**User:** {member.mention}\n**Moderator:** {ctx.user.mention}\n**Reason:** Temp ban expired.\n**Type:** Unban"
+        embed = custom_embed(title="Unban", description=txt, color=discord.Color.green())
+        await channel.send(embeds=[embed])
+
+    # case command
+    @app_commands.command(name="case", description="Get a case.")
+    @commands.has_permissions(manage_messages=True)
+    async def case(self, ctx, case_number: int):
+        case = self.db.get_case(case_number)
+        if case is None:
+            return await ctx.response.send_message("No case found.", ephemeral=True)
+        case_number = case[0]
+        user_id = case[2]
+        moderator_id = case[3]
+        reason = case[4]
+        case_type = case[5]
+        user = self.bot.get_user(user_id)
+        moderator = self.bot.get_user(moderator_id)
+        txt = f"**Case:** {case_number}\n**User:** {user.mention}\n**User Id**: {user.id}\n**Moderator:** {moderator.mention}\n**Reason:** {reason}\n**Type:** {case_type}"
+        embed = custom_embed(title="Case", description=txt, color=discord.Color.green())
+        embed.set_footer(text=f"Case {case_number}", icon_url=ctx.user.avatar.url)
+        await ctx.response.send_message(embeds=[embed])
+
+    # edit-case command
+    @app_commands.command(name="edit-case", description="Edit a case.")
+    @commands.has_permissions(manage_messages=True)
+    async def edit_case(self, ctx, case_number: int, *, reason: str):
+        if self.db.get_config(ctx.guild.id) is None:
+            return await ctx.response.send_message("Your server is not setup please run `/setup`", ephemeral=True)
+        case = self.db.get_case(case_number)
+        if case is None:
+            return await ctx.response.send_message("No case found.", ephemeral=True)
+        self.db.edit_case(case_number, ctx.guild.id, reason)
+        # send the user a dm telling them their case has been edited
+        user_id = case[2]
+        user = self.bot.get_user(user_id)
         try:
-            # make a random id for the case
-            case_id = random.randint(100000, 999999)
-            timestamp = datetime.datetime.utcnow().strftime("%d/%m/%Y %H:%M:%S")
-            print(timestamp)
-            server_data = self.db.get_guild(ctx.guild.id)
-            if server_data is None:
-                await ctx.response.send_message("You need to set up the server first. Use `/setup` to set up the server.", ephemeral=True)
-                return
-            self.db.add_report(case_id, ctx.user.id, user.id, ctx.user.id, reason, "warn", timestamp)
-            try:
-             embed = discord.Embed(title="You have been warned!", description="You have been warned in the {} discord server.".format(ctx.guild.name), color=0x00ff00)
-             new_dm = await user.create_dm()
-             await new_dm.send(embed=embed)
-            except:
-                pass
             txt = f"""
-            **Case ID:** {case_id}
-            **User:** {user.mention}
-            **Moderator:** {ctx.user}
-            **Reason:** {reason}
-            **Type:** Warn
-            **Date:** {timestamp}
-            To edit this case, use `/edit-report {case_id} <reason>`
+Your case has been edited in {ctx.guild.name} for {reason}
+            
+If you have any questions, please contact a staff member.
+
+Thanks, Case Number: {case_number}
             """
-            embed = discord.Embed(title="Warn", description=txt, color=0x00ff00)
-            channel = self.bot.get_channel(server_data[2])
-            await channel.send(embed=embed)
-            await ctx.response.send_message("Warned {}.".format(user.display_name), ephemeral=True)
-        except Exception as e:
-            await ctx.response.send_message("An error occured: {}".format(e))
+            await user.send(txt)
+        except:
+            pass
+        # send embed to the mod-log channel
+        time_1 = datetime.datetime.now()
+        time_2 = f"<t:{int(time.mktime(time_1.timetuple()))}>"
+        txt = f"**Case:** {case_number}\n**User:** {user.mention}\n**Moderator:** {ctx.user.mention}\n**Reason:** {reason}\n**Type:** Edit\n**Date:** {time_2}"
+        embed = custom_embed(title="Edit Case", description=txt, color=discord.Color.green())
+        channel = self.bot.get_channel(self.db.get_config(ctx.guild.id)[1])
+        await channel.send(embeds=[embed])
+        await ctx.response.send_message("Edited case.", ephemeral=True)
 
-    @app_commands.command(name="clear", description="deletes a certain amount of messages.")
-    @app_commands.checks.has_permissions(manage_messages=True)
-    async def clear(self, ctx, amount: int):
-        try:
-            # reply 
-            await ctx.response.send_message("Clearing {} messages...".format(amount), ephemeral=True)
-            await ctx.channel.purge(limit=amount)
-            await ctx.followup.send("Cleared {} messages.".format(amount), ephemeral=True)
-        except Exception as e:
-            await ctx.response.send_message("An error occured: {}".format(e))
-
-    @app_commands.command(name="edit-report", description="Edits a case.")
-    @app_commands.checks.has_permissions(manage_messages=True)
-    async def edit_report(self, ctx, case_id: int, *, reason: str):
-        try:
-            report = self.db.get_report(case_id)
-            if report is None:
-                await ctx.response.send_message("Case {} does not exist.".format(case_id))
-                return
-            self.db.edit_report(case_id, reason)
-            await ctx.response.send_message("Edited case {}.".format(case_id))
-        except Exception as e:
-            await ctx.response.send_message("An error occured: {}".format(e))
-
-    @app_commands.command(name="delete-report", description="Deletes a case.")
-    @app_commands.checks.has_permissions(administrator=True)
-    async def delete_report(self, ctx, case_id: int):
-        try:
-            report = self.db.get_report(case_id)
-            if report is None:
-                await ctx.response.send_message("Case {} does not exist.".format(case_id))
-                return
-            await ctx.response.send_message("Deleted case {}.".format(case_id))
-        except Exception as e:
-            await ctx.response.send_message("An error occured: {}".format(e))
-
-    @app_commands.command(name="get-report", description="Gets a case.")
-    @app_commands.checks.has_permissions(manage_messages=True)
-    async def get_report(self, ctx, case_id: int):
-        try:
-            report = self.db.get_report(case_id)
-            if report is None:
-                await ctx.response.send_message("Case {} does not exist.".format(case_id))
-                return
-            txt = f"""
-            **Case ID:** {report[0]}
-            **User:** <@{report[2]}>
-            **Moderator:** <@{report[1]}>
-            **Reason:** {report[4]}
-            **Type:** {report[5]}
-            **Date:** {report[6]}
-            To edit this case, use `/edit-report {report[0]} <reason>`
-            """
-            embed = discord.Embed(title="Case", description=txt, color=0x00ff00)
-            await ctx.response.send_message(embed=embed)
-        except Exception as e:
-            print(e)
-            await ctx.response.send_message("An error occured: {}".format(e))
-
-    @app_commands.command(name="get-reports", description="Gets all cases.")
-    @app_commands.checks.has_permissions(manage_messages=True)
-    async def get_reports(self, ctx):
-        try:
-            reports = self.db.get_reports(ctx.guild.id)
-            if reports is None:
-                await ctx.response.send_message("No cases exist.")
-                return
-            txt = ""
-            for report in reports:
-                txt += f"""
-                **Case ID:** {report[0]}
-                **User:** <@{report[2]}>
-                **Moderator:** <@{report[1]}>
-                **Reason:** {report[4]}
-                **Type:** {report[5]}
-                **Date:** {report[6]}
-                To edit this case, use `/edit-report {report[0]} <reason>`
-                """
-            embed = discord.Embed(title="Cases", description=txt, color=0x00ff00)
-            await ctx.response.send_message(embed=embed)
-        except Exception as e:
-            await ctx.response.send_message("An error occured: {}".format(e))
-
-    @app_commands.command(name="help", description="Shows this message.")
-    async def help(self, ctx):
-        embed = discord.Embed(title="Help", description="Here are all the commands you can use.", color=0x00ff00)
-        mod_commands = """
-        `/ban <user> <reason>` - Bans a user.
-        `/unban <user> <reason>` - Unbans a user.
-        `/kick <user> <reason>` - Kicks a user.
-        `/mute <user> <reason>` - Mutes a user.
-        `/unmute <user> <reason>` - Unmutes a user.
-        `/warn <user> <reason>` - Warns a user.
-        `/quarantine <user> <reason>` - Quarantines a user.
-        `/unquarantine <user> <reason>` - Unquarantines a user.
-        `/clear <amount>` - Deletes a certain amount of messages.
-        `/edit-report <case_id> <reason>` - Edits a case.
-        `/delete-report <case_id>` - Deletes a case.
-        `/get-report <case_id>` - Gets a case.
-        `/get-reports` - Gets all cases.
-        `/add-staff <user>` - Adds a user to the staff role.
-        `/remove-staff <user>` - Removes a user from the staff role.
-        """
-        config_commands = """
-        `/config` - Shows the current config.
-        `/editconfig` - Edits the config.
-        `/setup` - Sets up the bot.
-        """
-        embed.add_field(name="Mod", value=mod_commands, inline=False)
-        embed.add_field(name="Config", value=config_commands, inline=False)
-        await ctx.response.send_message(embed=embed)
+    # remove-case command
+    @app_commands.command(name="remove-case", description="Remove a case.")
+    @commands.has_permissions(manage_messages=True)
+    async def remove_case(self, ctx, case_number: int):
+        if self.db.get_config(ctx.guild.id) is None:
+            return await ctx.response.send_message("Your server is not setup please run `/setup`", ephemeral=True)
+        case = self.db.get_case(case_number)
+        if case is None:
+            return await ctx.response.send_message("No case found.", ephemeral=True)
+        self.db.remove_case(case_number)
+        # send the user a dm telling them their case has been removed
+        user_id = case[2]
+        user = self.bot.get_user(user_id)
+        # send embed to the mod-log channel
+        time_1 = datetime.datetime.now()
+        time_2 = f"<t:{int(time.mktime(time_1.timetuple()))}>"
+        txt = f"**Case:** {case_number}\n**User:** {user.mention}\n**Moderator:** {ctx.user.mention}\n**Reason:** Case removed.\n**Type:** Remove\n**Date:** {time_2}"
+        embed = custom_embed(title="Remove Case", description=txt, color=discord.Color.green())
+        channel = self.bot.get_channel(self.db.get_config(ctx.guild.id)[1])
+        await channel.send(embeds=[embed])
+        await ctx.response.send_message("Removed case.", ephemeral=True)
 
 async def setup(bot):
     await bot.add_cog(Mod(bot))

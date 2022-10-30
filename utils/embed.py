@@ -24,11 +24,11 @@ def success_embed(title: str, description: str) -> Embed:
     )
 
 
-def custom_embed(title: str, description: str) -> Embed:
+def custom_embed(title: str, description: str, color: str) -> Embed:
     return Embed(
         title=title,
         description=description,
-        color=discord.Color.blue()
+        color=color
     )
 
 def image_embed(title: str, description: str, image: str) -> Embed:
