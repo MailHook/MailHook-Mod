@@ -1,6 +1,5 @@
 import asyncio
 import datetime
-from msilib.schema import AppSearch
 import random
 import time
 import discord
