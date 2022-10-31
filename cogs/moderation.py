@@ -22,7 +22,7 @@ def time_converter(time):
         return -2
     return val * time_dict[unit]
 
-class New_Mod(commands.Cog):
+class Moderation(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.db = Database()
@@ -271,4 +271,4 @@ Case Number: {case_number}
 
 
 async def setup(bot):
-    await bot.add_cog(New_Mod(bot))
+    await bot.add_cog(Moderation(bot))

@@ -67,7 +67,7 @@ async def main():
     intents.emojis_and_stickers = True
     intents.bans = True
     intents.webhooks = True
-    ext = ['mod', 'errors', 'config', 'level', 'info', 'case']
+    ext = ['moderation', 'errors', 'config', 'level', 'info', 'case']
     async with ClientSession() as server_client:
      async with ModBot(debug=False, command_prefix="!", allowed_mentions=discord.AllowedMentions(everyone=False, roles=True, users=True, replied_user=True),  activity=discord.Game("Working on it"), client=server_client, intents=intents, help_command=None, initial_cogs=ext) as bot:
       token = os.getenv("DISCORD_TOKEN")
