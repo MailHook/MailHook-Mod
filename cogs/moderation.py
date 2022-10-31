@@ -6,6 +6,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 from utils.db import Database
+from utils.core import Moderation_core
 
 from utils.embed import custom_embed
 
@@ -25,6 +26,7 @@ class Moderation(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.db = Database()
+        self.core = Moderation_core(bot)
     
     # command group for moderation commands (slash commands)
     moderation = app_commands.Group(
@@ -46,10 +48,6 @@ class Moderation(commands.Cog):
         if self.db.get_config(ctx.guild.id) is None:
             return await ctx.response.send_message("Your server is not setup please run `/setup`", ephemeral=True)
         case_number = random.randint(100000, 999999)
-        if user.top_role >= ctx.user.top_role:
-            return await ctx.response.send_message("You cannot kick this user.", ephemeral=True)
-        if user == ctx.user:
-            return await ctx.response.send_message("You cannot kick yourself.", ephemeral=True)
         try:
             txt = f"""
 Hello, {user.mention}!, You have been kicked in {ctx.guild.name} for {reason}, Please read the rules and try to follow them next time.
@@ -66,7 +64,7 @@ Case Number: {case_number}
         channel = self.bot.get_channel(self.db.get_config(ctx.guild.id)[1])
         await channel.send(embeds=[embed])
         self.db.add_case(case_number, ctx.guild.id, user.id, ctx.user.id, reason, "kick", time_1)
-        await user.kick(reason=reason)
+        await self.core.kick(ctx=discord.Integration, user=user, mod_user=ctx.user, reason=reason)
         await ctx.response.send_message("Kicked user.", ephemeral=True)
 
     # ban command (slash command)

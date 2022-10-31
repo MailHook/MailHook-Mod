@@ -1,7 +1,5 @@
-import asyncio
 import discord
-import datetime
-import os
+from datetime import datetime
 from dotenv import load_dotenv
 
 from utils.embed import custom_embed
@@ -11,7 +9,6 @@ from discord.ext import commands
 from utils.bot import ModBot
 from discord import app_commands
 from utils.db import Database
-import random
 import time
 
 def time_converter(time):

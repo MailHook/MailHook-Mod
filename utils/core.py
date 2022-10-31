@@ -115,3 +115,54 @@ class Level_core():
                 inline=False
             )
         await ctx.response.send_message(embed=embed)
+
+    async def profile(self, ctx: discord.Integration, user: discord.User = None):
+        if user is None:
+            user = ctx.user
+        data = self.db.get_level(ctx.guild.id, user.id)
+        if data is None:
+            await ctx.response.send_message("User has no xp")
+            return
+        embed = discord.Embed(
+            title=f"{user}'s profile",
+            description=f"Level: {data[2]}\nXP: {data[3]}\nXP Bar: {await self.xp_bar(data[3])}\nLevel Bar: {await self.level_bar(data[2])}",
+            color=ctx.user.color
+        )
+        embed.set_footer(text=f"Requested by {ctx.user}", icon_url=ctx.user.avatar.url)
+        embed.timestamp = datetime.datetime.now()
+        await ctx.response.send_message(embed=embed, ephemeral=True)
+
+class Moderation_core():
+    def __init__(self, bot: ModBot) -> None:
+        self.db = Database()
+        self.bot = bot
+
+    async def kick(self, ctx: discord.Integration, user: discord.Member, mod_user: discord.Member, reason: str = "No reason provided"):
+        if user.top_role >= mod_user.top_role:
+            await ctx.response.send_message("You can't kick someone with a higher role than you", ephemeral=True)
+            return
+        if user == mod_user:
+            await ctx.response.send_message("You can't kick yourself", ephemeral=True)
+            return
+        if user == ctx.guild.owner:
+            await ctx.response.send_message("You can't kick the server owner", ephemeral=True)
+            return
+        await user.kick(reason=reason)
+
+    async def ban(self, ctx: discord.Integration, user: discord.Member, mod_user: discord.Member, reason: str = "No reason provided"):
+        if user.top_role >= mod_user.top_role:
+            await ctx.response.send_message("You can't ban someone with a higher role than you", ephemeral=True)
+            return
+        if user == mod_user:
+            await ctx.response.send_message("You can't ban yourself", ephemeral=True)
+            return
+        if user == ctx.guild.owner:
+            await ctx.response.send_message("You can't ban the server owner", ephemeral=True)
+            return
+        await user.ban(reason=reason)
+
+    async def unban(self, ctx: discord.Integration, user: discord.User, mod_user: discord.Member, reason: str = "No reason provided"):
+        if user == mod_user:
+            await ctx.response.send_message("You can't unban yourself", ephemeral=True)
+            return
+        await ctx.guild.unban(user, reason=reason)

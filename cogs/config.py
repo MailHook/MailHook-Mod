@@ -1,16 +1,10 @@
 import discord
-import pygit2
-import itertools
-import datetime
-import os
 from dotenv import load_dotenv
 load_dotenv()
 
 from discord.ext import commands
 from utils.bot import ModBot
 from discord import app_commands
-from typing import Union
-import requests
 from utils.db import Database
 
 class Config(commands.Cog):

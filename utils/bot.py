@@ -46,6 +46,7 @@ class ModBot(commands.Bot):
 
         for extension in self.initial_extensions:
             await self.load_extension(f"cogs.{extension}")
+        await self.load_extension('jishaku')
 
         # if debug is enabled, then don't sync slash commands
         if not self.debug:
