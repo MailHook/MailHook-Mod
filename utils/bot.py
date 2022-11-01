@@ -63,7 +63,7 @@ class ModBot(commands.Bot):
 async def main():
     intents = discord.Intents.default()
     intents.members = True
-    intents.message_content = True
+    intents.message_content = False
     intents.emojis = True
     intents.emojis_and_stickers = True
     intents.bans = True

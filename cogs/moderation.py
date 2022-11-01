@@ -181,6 +181,7 @@ Case Number: {case_number}
     )
     @app_commands.checks.has_permissions(manage_messages=True)
     async def warn(self, ctx, user: discord.Member, *, reason: str = "No reason provided."):
+        await ctx.response.defer()
         if self.db.get_config(ctx.guild.id) is None:
             return await ctx.response.send_message("Your server is not setup please run `/setup`", ephemeral=True)
         case_number = random.randint(100000, 999999)
@@ -207,7 +208,7 @@ Case Number: {case_number}
         channel = self.bot.get_channel(self.db.get_config(ctx.guild.id)[1])
         await channel.send(embeds=[embed])
         self.db.add_case(case_number, ctx.guild.id, user.id, ctx.user.id, reason, "warn", time_1)
-        await ctx.response.send_message("Warned user.", ephemeral=True)
+        await ctx.followup.send(f"Warned {user.name}.")
 
     @moderation.command(
         name="temp-warn",
@@ -220,6 +221,7 @@ Case Number: {case_number}
     )
     @app_commands.checks.has_permissions(manage_messages=True)
     async def temp_warn(self, ctx, user: discord.Member, timer: str, *, reason: str = "No reason provided."):
+        await ctx.response.defer()
         if self.db.get_config(ctx.guild.id) is None:
             return await ctx.response.send_message("Your server is not setup please run `/setup`", ephemeral=True)
         case_number = random.randint(100000, 999999)
@@ -243,9 +245,11 @@ Case Number: {case_number}
         channel = self.bot.get_channel(self.db.get_config(ctx.guild.id)[1])
         await channel.send(embeds=[embed])
         self.db.add_case(case_number, ctx.guild.id, user.id, ctx.user.id, reason, "temp-warn", time_1)
-        await ctx.response.send_message("Temporarily warned user.", ephemeral=True)
+        await ctx.followup.send(f"Temporarily warned {user.name}.")
         await asyncio.sleep(time_converter(timer))
-        txt = f"**Case:** {case_number}\n**User:** {user.mention}\n**Moderator:** {ctx.user.mention}\n**Reason:** Temp warn expired.\n**Type:** Unwarn"
+        # delete the case and send a message in the mod log
+        self.db.delete_case(case_number)
+        txt = f"**Case:** **Delete**\n**User:** {user.mention}\n**Moderator:** {ctx.user.mention}\n**Reason:** Temp warn expired.\n**Type:** Unwarn"
         embed = custom_embed(title="Unwarn", description=txt, color=discord.Color.green())
         await channel.send(embeds=[embed])
 
@@ -266,6 +270,116 @@ Case Number: {case_number}
         await ctx.channel.purge(limit=amount)
         ctx.response.is_done()
 
+    @moderation.command(
+        name="mute",
+        description="Mute a member in the server.",
+    )
+    @app_commands.describe(
+        user="The user to mute.",
+        reason="The reason for muting the user.",
+    )
+    @app_commands.checks.has_permissions(manage_messages=True)
+    async def mute(self, ctx, user: discord.Member, *, reason: str = "No reason provided."):
+        if self.db.get_config(ctx.guild.id) is None:
+            return await ctx.response.send_message("Your server is not setup please run `/setup`", ephemeral=True)
+        case_number = random.randint(100000, 999999)
+        if user.top_role >= ctx.user.top_role:
+            return await ctx.response.send_message("You cannot mute this user.", ephemeral=True)
+        if user == ctx.user:
+            return await ctx.response.send_message("You cannot mute yourself.", ephemeral=True)
+        try:
+            txt = f"""
+Hello, {user.mention}!, You have been muted in {ctx.guild.name} for {reason}, Please read the rules and try to follow them next time.
+
+Case Number: {case_number}
+            """
+            await user.send(txt)
+        except:
+            pass
+        time_1 = datetime.datetime.now()
+        time_2 = f"<t:{int(time.mktime(time_1.timetuple()))}>"
+        txt = f"**Case:** {case_number}\n**User:** {user.mention}\n**Moderator:** {ctx.user.mention}\n**Reason:** {reason}\n**Type:** Mute\n**Date:** {time_2}"
+        embed = custom_embed(title="Mute", description=txt, color=discord.Color.green())
+        channel = self.bot.get_channel(self.db.get_config(ctx.guild.id)[1])
+        await channel.send(embeds=[embed])
+        self.db.add_case(case_number, ctx.guild.id, user.id, ctx.user.id, reason, "mute", time_1)
+        await ctx.response.send_message("Muted user.", ephemeral=True)
+        await user.add_roles(discord.Object(self.db.get_config(ctx.guild.id)[3]))
+
+    @moderation.command(
+        name="unmute",
+        description="Unmute a member in the server.",
+    )
+    @app_commands.describe(
+        user="The user to unmute.",
+        reason="The reason for unmuting the user.",
+    )
+    @app_commands.checks.has_permissions(manage_messages=True)
+    async def unmute(self, ctx, user: discord.Member, *, reason: str = "No reason provided."):
+        if self.db.get_config(ctx.guild.id) is None:
+            return await ctx.response.send_message("Your server is not setup please run `/setup`", ephemeral=True)
+        case_number = random.randint(100000, 999999)
+        if user.top_role >= ctx.user.top_role:
+            return await ctx.response.send_message("You cannot unmute this user.", ephemeral=True)
+        if user == ctx.user:
+            return await ctx.response.send_message("You cannot unmute yourself.", ephemeral=True)
+        try:
+            txt = f"""
+Hello, {user.mention}!, You have been unmuted in {ctx.guild.name} for {reason}.
+
+Case Number: {case_number}
+            """
+            await user.send(txt)
+        except:
+            pass
+        time_1 = datetime.datetime.now()
+        time_2 = f"<t:{int(time.mktime(time_1.timetuple()))}>"
+        txt = f"**Case:** {case_number}\n**User:** {user.mention}\n**Moderator:** {ctx.user.mention}\n**Reason:** {reason}\n**Type:** Unmute\n**Date:** {time_2}"
+        embed = custom_embed(title="Unmute", description=txt, color=discord.Color.green())
+        channel = self.bot.get_channel(self.db.get_config(ctx.guild.id)[1])
+        await channel.send(embeds=[embed])
+        self.db.add_case(case_number, ctx.guild.id, user.id, ctx.user.id, reason, "unmute", time_1)
+        await ctx.response.send_message("Unmuted user.", ephemeral=True)
+        await user.remove_roles(discord.Object(self.db.get_config(ctx.guild.id)[3]))
+
+    @moderation.command(
+        name="temp-mute",
+        description="Temporarily mute a member in the server.",
+    )
+    @app_commands.describe(
+        user="The user to mute.",
+        time_muted="The time to mute the user for.",
+        reason="The reason for muting the user.",
+    )
+    @app_commands.checks.has_permissions(manage_messages=True)
+    async def temp_mute(self, ctx, user: discord.Member, time_muted: str, *, reason: str = "No reason provided."):
+        if self.db.get_config(ctx.guild.id) is None:
+            return await ctx.response.send_message("Your server is not setup please run `/setup`", ephemeral=True)
+        case_number = random.randint(100000, 999999)
+        if user.top_role >= ctx.user.top_role:
+            return await ctx.response.send_message("You cannot mute this user.", ephemeral=True)
+        if user == ctx.user:
+            return await ctx.response.send_message("You cannot mute yourself.", ephemeral=True)
+        try:
+            txt = f"""
+Hello, {user.mention}!, You have been muted in {ctx.guild.name} for {reason}, Please read the rules and try to follow them next time.
+
+Case Number: {case_number}
+            """
+            await user.send(txt)
+        except:
+            pass
+        time_1 = datetime.datetime.now()
+        time_2 = f"<t:{int(time.mktime(time_1.timetuple()))}>"
+        txt = f"**Case:** {case_number}\n**User:** {user.mention}\n**Moderator:** {ctx.user.mention}\n**Reason:** {reason}\n**Type:** Temp Mute\n**Date:** {time_2}\n**Time:** {time_muted}"
+        embed = custom_embed(title="Temp Mute", description=txt, color=discord.Color.green())
+        channel = self.bot.get_channel(self.db.get_config(ctx.guild.id)[1])
+        await channel.send(embeds=[embed])
+        self.db.add_case(case_number, ctx.guild.id, user.id, ctx.user.id, reason, "temp-mute", time_1)
+        await ctx.response.send_message("Temporarily muted user.", ephemeral=True)
+        await user.add_roles(discord.Object(self.db.get_config(ctx.guild.id)[3]))
+        await asyncio.sleep(time_converter(time_muted))
+        await user.remove_roles(discord.Object(self.db.get_config(ctx.guild.id)[3]))
 
 async def setup(bot):
     await bot.add_cog(Moderation(bot))

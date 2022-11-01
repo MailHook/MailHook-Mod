@@ -36,6 +36,9 @@ class Database():
         self.con.execute("DELETE FROM reports WHERE guild_id = ?", (guild_id,))
         self.con.commit()
 
+    def find_case_warns(self, guild_id: int, user_id: int):
+        return self.con.execute("SELECT * FROM reports WHERE guild_id = ? AND user_id = ? AND case_type = ?", (guild_id, user_id, "warn")).fetchall()
+
     ###########################################
 
     def add_level(self, guild_id: int, user_id: int, level: int, xp: int):
