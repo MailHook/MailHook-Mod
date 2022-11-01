@@ -1,6 +1,9 @@
 import asyncio
 import datetime
+import time
 import discord
+
+from utils.embed import custom_embed
 from .bot import ModBot
 from .db import Database
 
@@ -137,27 +140,13 @@ class Moderation_core():
         self.db = Database()
         self.bot = bot
 
-    async def kick(self, ctx: discord.Integration, user: discord.Member, mod_user: discord.Member, reason: str = "No reason provided"):
-        # save data here instead of in the command
+    async def kick(self, ctx: discord.Integration, guild: discord.Guild, user: discord.Member, mod_user: discord.Member, reason: str = "No reason provided", case_number: int=None):
+        time_1 = datetime.datetime.now()
+        time_2 = f"<t:{int(time.mktime(time_1.timetuple()))}>"
+        txt = f"**Case:** {case_number}\n**User:** {user.mention}\n**Moderator:** {mod_user.mention}\n**Reason:** {reason}\n**Type:** Kick\n**Date:** {time_2}"
+        embed = custom_embed(title="Kick", description=txt, color=discord.Color.green())
+        channel = self.bot.get_channel(self.db.get_config(guild.id)[1])
+        await channel.send(embeds=[embed])
+        self.db.add_case(case_number, guild.id, user.id, mod_user.id, reason, "kick", time_1)
         reason_for_kick = f"Kicked by {mod_user} for {reason}"
-        user.kick(reason=reason_for_kick)
-
-    async def send_reason(self, ctx: discord.Integration, type: str, case_number: int, user: discord.Member, reason: str = "No reason provided"):
-        # send a message to the user
-        txt = f"""
-Hello, {user.mention}!, You have been {type} in {ctx.guild.name} for {reason}, Please read the rules and try to follow them next time.
-
-Case Number: {case_number}
-        """
-        try: 
-            await user.send(txt)
-            return True
-        except:
-            return False
-
-    async def send_message(self, text: str, user: discord.Member):
-        try: 
-            await user.send(text)
-            return True
-        except:
-            return False
+        await user.kick(reason=reason_for_kick)

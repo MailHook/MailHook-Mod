@@ -66,14 +66,7 @@ Case Number: {case_number}
             await user.send(txt)
         except:
             pass
-        time_1 = datetime.datetime.now()
-        time_2 = f"<t:{int(time.mktime(time_1.timetuple()))}>"
-        txt = f"**Case:** {case_number}\n**User:** {user.mention}\n**Moderator:** {ctx.user.mention}\n**Reason:** {reason}\n**Type:** Kick\n**Date:** {time_2}"
-        embed = custom_embed(title="Kick", description=txt, color=discord.Color.green())
-        channel = self.bot.get_channel(self.db.get_config(ctx.guild.id)[1])
-        await channel.send(embeds=[embed])
-        self.db.add_case(case_number, ctx.guild.id, user.id, ctx.user.id, reason, "kick", time_1)
-        await self.core.kick(ctx=discord.Integration, user=user, mod_user=ctx.user, reason=reason)
+        await self.core.kick(ctx=discord.Integration, guild=ctx.guild, user=user, mod_user=ctx.user, reason=reason, case_number=case_number)
         await ctx.followup.send("Kicked user.", ephemeral=True)
 
     # ban command (slash command)
