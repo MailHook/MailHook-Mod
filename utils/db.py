@@ -6,11 +6,13 @@ class Database():
         self.con = sqlite3.connect(db_name)
         self.con.execute("CREATE TABLE IF NOT EXISTS reports (case_id INTEGER, guild_id INTEGER, user_id INTEGER, moderator_id INTEGER, reason TEXT, case_type TEXT, timestamp TEXT)")
         # server_config table
-        self.con.execute("CREATE TABLE IF NOT EXISTS server_config (guild_id INTEGER, log_channel_id INTEGER, reports_channel_id INTEGER, role_id INTEGER, staff_role_id INTEGER)")
+        self.con.execute("CREATE TABLE IF NOT EXISTS server_config (guild_id INTEGER, log_channel_id INTEGER, reports_channel_id INTEGER, role_id INTEGER, staff_role_id INTEGER, ticket_category_id INTEGER)")
         # level table
         self.con.execute("CREATE TABLE IF NOT EXISTS levels (guild_id INTEGER, user_id INTEGER, level INTEGER, xp INTEGER)")
         # roles table
         self.con.execute("CREATE TABLE IF NOT EXISTS roles (guild_id INTEGER, role_id INTEGER, level INTEGER)")
+        # ticket table
+        self.con.execute("CREATE TABLE IF NOT EXISTS tickets (guild_id INTEGER, channel_id INTEGER, user_id INTEGER, staff_id INTEGER)")
 
     ###########################################
 
@@ -84,17 +86,53 @@ class Database():
 
     ###########################################
 
-    def add_config(self, guild_id: int, log_channel_id: int, reports_channel_id: int, role_id: int, staff_role_id: int):
-        self.con.execute("INSERT INTO server_config VALUES (?, ?, ?, ?, ?)", (guild_id, log_channel_id, reports_channel_id, role_id, staff_role_id))
+    def add_config(self, guild_id: int, log_channel_id: int, reports_channel_id: int, role_id: int, staff_role_id: int, ticket_category_id: int):
+        self.con.execute("INSERT INTO server_config VALUES (?, ?, ?, ?, ?, ?)", (guild_id, log_channel_id, reports_channel_id, role_id, staff_role_id, ticket_category_id))
         self.con.commit()
 
     def get_config(self, guild_id: int):
         return self.con.execute("SELECT * FROM server_config WHERE guild_id = ?", (guild_id,)).fetchone()
 
-    def update_config(self, guild_id: int, log_channel_id: int, reports_channel_id: int, role_id: int, staff_role_id: int):
-        self.con.execute("UPDATE server_config SET log_channel_id = ?, reports_channel_id = ?, role_id = ?, staff_role_id = ? WHERE guild_id = ?", (log_channel_id, reports_channel_id, role_id, staff_role_id, guild_id))
-        self.con.commit()
-
     def delete_config(self, guild_id: int):
         self.con.execute("DELETE FROM server_config WHERE guild_id = ?", (guild_id,))
+        self.con.commit()
+
+    def edit_log_channel(self, guild_id: int, log_channel_id: int):
+        self.con.execute("UPDATE server_config SET log_channel_id = ? WHERE guild_id = ?", (log_channel_id, guild_id))
+        self.con.commit()
+    
+    def edit_reports_channel(self, guild_id: int, reports_channel_id: int):
+        self.con.execute("UPDATE server_config SET reports_channel_id = ? WHERE guild_id = ?", (reports_channel_id, guild_id))
+        self.con.commit()
+
+    def edit_role(self, guild_id: int, role_id: int):
+        self.con.execute("UPDATE server_config SET role_id = ? WHERE guild_id = ?", (role_id, guild_id))
+        self.con.commit()
+
+    def edit_staff_role(self, guild_id: int, staff_role_id: int):
+        self.con.execute("UPDATE server_config SET staff_role_id = ? WHERE guild_id = ?", (staff_role_id, guild_id))
+        self.con.commit()
+
+    def edit_ticket_category(self, guild_id: int, ticket_category_id: int):
+        self.con.execute("UPDATE server_config SET ticket_category_id = ? WHERE guild_id = ?", (ticket_category_id, guild_id))
+        self.con.commit()
+
+    ###########################################
+
+    def create_ticket(self, guild_id: int, channel_id: int, user_id: int, staff_id: int):
+        self.con.execute("INSERT INTO tickets VALUES (?, ?, ?, ?)", (guild_id, channel_id, user_id, staff_id))
+        self.con.commit()
+
+    def get_ticket(self, guild_id: int, channel_id: int):
+        return self.con.execute("SELECT * FROM tickets WHERE guild_id = ? AND channel_id = ?", (guild_id, channel_id)).fetchone()
+
+    def get_tickets(self, guild_id: int):
+        return self.con.execute("SELECT * FROM tickets WHERE guild_id = ?", (guild_id,)).fetchall()
+
+    def close_ticket(self, guild_id: int, channel_id: int):
+        self.con.execute("DELETE FROM tickets WHERE guild_id = ? AND channel_id = ?", (guild_id, channel_id))
+        self.con.commit()
+
+    def assign_ticket(self, guild_id: int, channel_id: int, staff_id: int):
+        self.con.execute("UPDATE tickets SET staff_id = ? WHERE guild_id = ? AND channel_id = ?", (staff_id, guild_id, channel_id))
         self.con.commit()

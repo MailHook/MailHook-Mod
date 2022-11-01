@@ -138,31 +138,26 @@ class Moderation_core():
         self.bot = bot
 
     async def kick(self, ctx: discord.Integration, user: discord.Member, mod_user: discord.Member, reason: str = "No reason provided"):
-        if user.top_role >= mod_user.top_role:
-            await ctx.response.send_message("You can't kick someone with a higher role than you", ephemeral=True)
-            return
-        if user == mod_user:
-            await ctx.response.send_message("You can't kick yourself", ephemeral=True)
-            return
-        if user == ctx.guild.owner:
-            await ctx.response.send_message("You can't kick the server owner", ephemeral=True)
-            return
-        await user.kick(reason=reason)
+        # save data here instead of in the command
+        reason_for_kick = f"Kicked by {mod_user} for {reason}"
+        user.kick(reason=reason_for_kick)
 
-    async def ban(self, ctx: discord.Integration, user: discord.Member, mod_user: discord.Member, reason: str = "No reason provided"):
-        if user.top_role >= mod_user.top_role:
-            await ctx.response.send_message("You can't ban someone with a higher role than you", ephemeral=True)
-            return
-        if user == mod_user:
-            await ctx.response.send_message("You can't ban yourself", ephemeral=True)
-            return
-        if user == ctx.guild.owner:
-            await ctx.response.send_message("You can't ban the server owner", ephemeral=True)
-            return
-        await user.ban(reason=reason)
+    async def send_reason(self, ctx: discord.Integration, type: str, case_number: int, user: discord.Member, reason: str = "No reason provided"):
+        # send a message to the user
+        txt = f"""
+Hello, {user.mention}!, You have been {type} in {ctx.guild.name} for {reason}, Please read the rules and try to follow them next time.
 
-    async def unban(self, ctx: discord.Integration, user: discord.User, mod_user: discord.Member, reason: str = "No reason provided"):
-        if user == mod_user:
-            await ctx.response.send_message("You can't unban yourself", ephemeral=True)
-            return
-        await ctx.guild.unban(user, reason=reason)
+Case Number: {case_number}
+        """
+        try: 
+            await user.send(txt)
+            return True
+        except:
+            return False
+
+    async def send_message(self, text: str, user: discord.Member):
+        try: 
+            await user.send(text)
+            return True
+        except:
+            return False

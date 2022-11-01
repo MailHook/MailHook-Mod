@@ -84,8 +84,8 @@ class Level_System(commands.Cog):
             await ctx.response.send_message(f"{role.mention} has been removed!", ephemeral=True)
 
     @level.command(name="profile", description="Shows your profile")
-    async def profile(self, ctx: discord.Integration):
-        await self.level_core.profile(ctx)
+    async def profile(self, ctx: discord.Integration, member: discord.Member=None):
+        await self.level_core.profile(ctx, member)
 
     @level.command(name="leaderboard", description="Shows the leaderboard")
     async def leaderboard(self, ctx: discord.Integration):
