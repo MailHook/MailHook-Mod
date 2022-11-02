@@ -5,6 +5,9 @@ from utils.bot import ModBot
 from utils.db import Database
 from utils.embed import error_embed
 
+# NOTE: In the create command add an enbed that is sent to the channel that the ticket was created in
+# NOTE: if you have the time could you make a few buttons like, close, and force close for the ticket, Btw force close is for the user and the close is for the staff
+
 class Ticket(commands.Cog):
     def __init__(self, bot: ModBot):
         self.bot = bot
@@ -34,7 +37,9 @@ class Ticket(commands.Cog):
         }
         channel = await ctx.guild.create_text_channel(f"ticket-{ctx.user.id}", category=category, overwrites=overwrites)
         self.db.create_ticket(guild_id=ctx.guild.id, channel_id=channel.id, user_id=ctx.user.id, staff_id=10)
-        # send a message to the channel
+
+        # Embed here for ticket creation
+
         await ctx.response.send_message(f"Ticket created: {channel.mention}", ephemeral=True)
 
     # close the ticket
