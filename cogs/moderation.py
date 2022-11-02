@@ -57,15 +57,6 @@ class Moderation(commands.Cog):
             return await ctx.followup.send("You can't kick someone with a higher role than you!", ephemeral=True)
         if user == ctx.guild.owner:
             return await ctx.followup.send("You can't kick the server owner!", ephemeral=True)
-        try:
-            txt = f"""
-Hello, {user.mention}!, You have been kicked in {ctx.guild.name} for {reason}, Please read the rules and try to follow them next time.
-
-Case Number: {case_number}
-            """
-            await user.send(txt)
-        except:
-            pass
         await self.core.kick(ctx=discord.Integration, guild=ctx.guild, user=user, mod_user=ctx.user, reason=reason, case_number=case_number)
         await ctx.followup.send("Kicked user.", ephemeral=True)
 

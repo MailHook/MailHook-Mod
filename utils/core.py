@@ -149,4 +149,33 @@ class Moderation_core():
         await channel.send(embeds=[embed])
         self.db.add_case(case_number, guild.id, user.id, mod_user.id, reason, "kick", time_1)
         reason_for_kick = f"Kicked by {mod_user} for {reason}"
+        txt = f"""
+Hello, {user.mention}!, You have been kicked in {guild.name} for {reason}, Please read the rules and try to follow them next time.
+
+Case Number: {case_number}
+            """
+        try:
+           await user.send(txt)
+        except:
+            raise Exception("User has DMs disabled")
         await user.kick(reason=reason_for_kick)
+
+    async def ban(self, ctx: discord.Integration, guild: discord.Guild, user: discord.Member, mod_user: discord.Member, reason: str = "No reason provided", case_number: int=None):
+        time_1 = datetime.datetime.now()
+        time_2 = f"<t:{int(time.mktime(time_1.timetuple()))}>"
+        txt = f"**Case:** {case_number}\n**User:** {user.mention}\n**Moderator:** {mod_user.mention}\n**Reason:** {reason}\n**Type:** Ban\n**Date:** {time_2}"
+        embed = custom_embed(title="Ban", description=txt, color=discord.Color.green())
+        channel = self.bot.get_channel(self.db.get_config(guild.id)[1])
+        await channel.send(embeds=[embed])
+        self.db.add_case(case_number, guild.id, user.id, mod_user.id, reason, "ban", time_1)
+        reason_for_ban = f"Banned by {mod_user} for {reason}"
+        txt = f"""
+Hello, {user.mention}!, You have been banned in {guild.name} for {reason}, Please read the rules and try to follow them next time.
+
+Case Number: {case_number}
+            """
+        try:
+           await user.send(txt)
+        except:
+            raise Exception("User has DMs disabled")
+        await user.ban(reason=reason_for_ban)
