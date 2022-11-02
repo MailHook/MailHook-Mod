@@ -1,12 +1,13 @@
 import discord
+import datetime
 from discord.ext import commands
 from discord import app_commands
 from utils.bot import ModBot
 from utils.db import Database
 from utils.embed import error_embed
 
-# NOTE: In the create command add an enbed that is sent to the channel that the ticket was created in
-# NOTE: if you have the time could you make a few buttons like, close, and force close for the ticket, Btw force close is for the user and the close is for the staff
+
+# NOTE: dont know how to implement buttons. pls teach sensei.
 
 class Ticket(commands.Cog):
     def __init__(self, bot: ModBot):
@@ -38,7 +39,15 @@ class Ticket(commands.Cog):
         channel = await ctx.guild.create_text_channel(f"ticket-{ctx.user.id}", category=category, overwrites=overwrites)
         self.db.create_ticket(guild_id=ctx.guild.id, channel_id=channel.id, user_id=ctx.user.id, staff_id=10)
 
-        # Embed here for ticket creation
+        msg = f"{role.mention} a new ticket has been created by {ctx.user.mention}!"
+        embed = discord.Embed(
+            title="Ticket Created",
+            description=f"Ticket ID: {ctx.user.id}",
+            color=ctx.user.color
+        )
+        embed.set_footer(text=f"Ticket by: {ctx.user.name}", icon_url=ctx.user.avatar.url)
+        embed.timestamp = datetime.datetime.now()
+        await channel.send(content = msg, embed=embed)
 
         await ctx.response.send_message(f"Ticket created: {channel.mention}", ephemeral=True)
 
