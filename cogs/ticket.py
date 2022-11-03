@@ -30,6 +30,9 @@ class Ticket(commands.Cog):
         if role is None:
             await ctx.response.send_message("The staff role is not set please run `/support editconfig staff_role`", ephemeral=True)
             return
+        if self.db.ticket_exists(ctx.guild.id, ctx.user.id):
+            await ctx.response.send_message("You already have a ticket open", ephemeral=True)
+            return
         overwrites = {
             ctx.guild.default_role: discord.PermissionOverwrite(read_messages=False),
             ctx.user: discord.PermissionOverwrite(read_messages=True),
