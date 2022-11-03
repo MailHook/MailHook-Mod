@@ -127,6 +127,9 @@ class Database():
     def get_tickets(self, guild_id: int):
         return self.con.execute("SELECT * FROM tickets WHERE guild_id = ?", (guild_id,)).fetchall()
 
+    def ticket_exists(self, guild_id: int, user_id: int):
+        return self.con.execute("SELECT * FROM tickets WHERE guild_id = ? AND user_id = ?", (guild_id, user_id)).fetchone()
+
     def close_ticket(self, guild_id: int, channel_id: int):
         self.con.execute("DELETE FROM tickets WHERE guild_id = ? AND channel_id = ?", (guild_id, channel_id))
         self.con.commit()
