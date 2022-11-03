@@ -79,23 +79,9 @@ class Moderation(commands.Cog):
             return await ctx.ctx.followup.send("You cannot ban this user.", ephemeral=True)
         if user == ctx.user:
             return await ctx.followup.send("You cannot ban yourself.", ephemeral=True)
-        try:
-            txt = f"""
-Hello, {user.mention}!, You have been banned in {ctx.guild.name} for {reason}, Please read the rules and try to follow them next time.
-
-Case Number: {case_number}
-            """
-            await user.send(txt)
-        except:
-            pass
-        time_1 = datetime.datetime.now()
-        time_2 = f"<t:{int(time.mktime(time_1.timetuple()))}>"
-        txt = f"**Case:** {case_number}\n**User:** {user.mention}\n**Moderator:** {ctx.user.mention}\n**Reason:** {reason}\n**Type:** Ban\n**Date:** {time_2}"
-        embed = custom_embed(title="Ban", description=txt, color=discord.Color.green())
-        channel = self.bot.get_channel(self.db.get_config(ctx.guild.id)[1])
-        await channel.send(embeds=[embed])
-        self.db.add_case(case_number, ctx.guild.id, user.id, ctx.user.id, reason, "ban", time_1)
-        await user.ban(reason=reason)
+        #self.db.add_case(case_number, ctx.guild.id, user.id, ctx.user.id, reason, "ban", time_1)
+        #await user.ban(reason=reason)
+        await self.core.ban(ctx=ctx, guild=ctx.guild, user=user, mod_user=ctx.user, reason=reason, case_number=case_number)
         await ctx.followup.send("Banned user.", ephemeral=True)
 
     # unban command (slash command)
@@ -104,23 +90,24 @@ Case Number: {case_number}
         description="Unban a member from the server.",
     )
     @app_commands.describe(
-        user="The user to unban.",
+        user_id="The user id to unban.",
         reason="The reason for unbanning the user."
     )
     @app_commands.checks.has_permissions(ban_members=True)
-    async def unban(self, ctx, user: discord.User, *, reason: str = "No reason provided."):
+    async def unban(self, ctx, user_id: str, *, reason: str = "No reason provided."):
         await ctx.response.defer()
+        user_id = int(user_id)
         if self.db.get_config(ctx.guild.id) is None:
             return await ctx.followup.send("Your server is not setup please run `/setup`", ephemeral=True)
         case_number = random.randint(100000, 999999)
-        time_1 = datetime.datetime.now()
-        time_2 = f"<t:{int(time.mktime(time_1.timetuple()))}>"
-        txt = f"**Case:** {case_number}\n**User:** {user.mention}\n**Moderator:** {ctx.user.mention}\n**Reason:** {reason}\n**Type:** Unban\n**Date:** {time_2}"
-        embed = custom_embed(title="Unban", description=txt, color=discord.Color.green())
-        channel = self.bot.get_channel(self.db.get_config(ctx.guild.id)[1])
-        await channel.send(embeds=[embed])
-        self.db.add_case(case_number, ctx.guild.id, user.id, ctx.user.id, reason, "unban", time_1)
-        await ctx.guild.unban(user, reason=reason)
+        user = await self.bot.fetch_user(user_id)
+        if user is None:
+            return await ctx.followup.send("That user does not exist.", ephemeral=True)
+        # check if user is banned
+        bans = [entry async for entry in ctx.guild.bans(limit=2000)]
+        if user_id not in [entry.user.id for entry in bans]:
+            return await ctx.followup.send("That user is not banned.", ephemeral=True)
+        await self.core.unban(ctx=ctx, guild=ctx.guild, user_id=user_id, mod_user=ctx.user, reason=reason, case_number=case_number)
         await ctx.followup.send("Unbanned user.", ephemeral=True)
 
     # mute command (slash command)

@@ -179,3 +179,14 @@ Case Number: {case_number}
         except:
             raise Exception("User has DMs disabled")
         await user.ban(reason=reason_for_ban)
+
+    async def unban(self, ctx: discord.Integration, guild: discord.Guild, user_id: int, mod_user: discord.Member, reason: str = "No reason provided", case_number: int=None):
+        time_1 = datetime.datetime.now()
+        time_2 = f"<t:{int(time.mktime(time_1.timetuple()))}>"
+        txt = f"**Case:** {case_number}\n**User:** {user_id}\n**Moderator:** {mod_user.mention}\n**Reason:** {reason}\n**Type:** Unban\n**Date:** {time_2}"
+        embed = custom_embed(title="Unban", description=txt, color=discord.Color.green())
+        channel = self.bot.get_channel(self.db.get_config(guild.id)[1])
+        await channel.send(embeds=[embed])
+        self.db.add_case(case_number, guild.id, user_id, mod_user.id, reason, "unban", time_1)
+        reason_for_unban = f"Unbanned by {mod_user} for {reason}"
+        await guild.unban(discord.Object(id=user_id), reason=reason_for_unban)
