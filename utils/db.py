@@ -6,13 +6,15 @@ class Database():
         self.con = sqlite3.connect(db_name)
         self.con.execute("CREATE TABLE IF NOT EXISTS reports (case_id INTEGER, guild_id INTEGER, user_id INTEGER, moderator_id INTEGER, reason TEXT, case_type TEXT, timestamp TEXT)")
         # server_config table
-        self.con.execute("CREATE TABLE IF NOT EXISTS server_config (guild_id INTEGER, log_channel_id INTEGER, reports_channel_id INTEGER, role_id INTEGER, staff_role_id INTEGER, ticket_category_id INTEGER)")
+        self.con.execute("CREATE TABLE IF NOT EXISTS server_config (guild_id INTEGER, log_channel_id INTEGER, reports_channel_id INTEGER, role_id INTEGER, staff_role_id INTEGER)")
         # level table
         self.con.execute("CREATE TABLE IF NOT EXISTS levels (guild_id INTEGER, user_id INTEGER, level INTEGER, xp INTEGER)")
         # roles table
         self.con.execute("CREATE TABLE IF NOT EXISTS roles (guild_id INTEGER, role_id INTEGER, level INTEGER)")
         # ticket table
         self.con.execute("CREATE TABLE IF NOT EXISTS tickets (guild_id INTEGER, channel_id INTEGER, user_id INTEGER, staff_id INTEGER)")
+        # ticket config table
+        self.con.execute("CREATE TABLE IF NOT EXISTS ticket_config (guild_id INTEGER, ticket_category_id INTEGER, ticket_staff_role_id INTEGER, ticket_start_message TEXT)")
 
     ###########################################
 
@@ -86,8 +88,8 @@ class Database():
 
     ###########################################
 
-    def add_config(self, guild_id: int, log_channel_id: int, reports_channel_id: int, role_id: int, staff_role_id: int, ticket_category_id: int):
-        self.con.execute("INSERT INTO server_config VALUES (?, ?, ?, ?, ?, ?)", (guild_id, log_channel_id, reports_channel_id, role_id, staff_role_id, ticket_category_id))
+    def add_config(self, guild_id: int, log_channel_id: int, reports_channel_id: int, role_id: int, staff_role_id: int):
+        self.con.execute("INSERT INTO server_config VALUES (?, ?, ?, ?, ?)", (guild_id, log_channel_id, reports_channel_id, role_id, staff_role_id))
         self.con.commit()
 
     def get_config(self, guild_id: int):
@@ -113,10 +115,6 @@ class Database():
         self.con.execute("UPDATE server_config SET staff_role_id = ? WHERE guild_id = ?", (staff_role_id, guild_id))
         self.con.commit()
 
-    def edit_ticket_category(self, guild_id: int, ticket_category_id: int):
-        self.con.execute("UPDATE server_config SET ticket_category_id = ? WHERE guild_id = ?", (ticket_category_id, guild_id))
-        self.con.commit()
-
     ###########################################
 
     def create_ticket(self, guild_id: int, channel_id: int, user_id: int, staff_id: int):
@@ -135,4 +133,17 @@ class Database():
 
     def assign_ticket(self, guild_id: int, channel_id: int, staff_id: int):
         self.con.execute("UPDATE tickets SET staff_id = ? WHERE guild_id = ? AND channel_id = ?", (staff_id, guild_id, channel_id))
+        self.con.commit()
+
+    ###########################################
+
+    def ticket_config(self, guild_id: int):
+        return self.con.execute("SELECT * FROM ticket_config WHERE guild_id = ?", (guild_id,)).fetchone()
+
+    def create_ticket_config(self, guild_id: int, category_id: int, role_id: int, start_message: str):
+        self.con.execute("INSERT INTO ticket_config VALUES (?, ?, ?, ?)", (guild_id, category_id, role_id, start_message))
+        self.con.commit()
+
+    def edit_ticket_config(self, guild_id: int, category_id: int, role_id: int, start_message: str):
+        self.con.execute("UPDATE ticket_config SET ticket_category_id = ?, ticket_staff_role_id = ?, ticket_start_message = ? WHERE guild_id = ?", (category_id, role_id, start_message, guild_id))
         self.con.commit()

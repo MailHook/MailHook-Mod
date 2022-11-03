@@ -37,10 +37,9 @@ class Config(commands.Cog):
         log_channel="The log channel",
         report_channel="The report channel",
         staff_role="The mod role",
-        mute_role="The mute role",
-        ticket_category="The ticket category"
+        mute_role="The mute role"
     )
-    async def edit(self, ctx, log_channel: discord.TextChannel=None, report_channel: discord.TextChannel=None, staff_role: discord.Role=None, mute_role: discord.Role=None, ticket_category: discord.CategoryChannel=None):
+    async def edit(self, ctx, log_channel: discord.TextChannel=None, report_channel: discord.TextChannel=None, staff_role: discord.Role=None, mute_role: discord.Role=None):
         data = self.db.get_config(ctx.guild.id)
         if data is None:
          await ctx.response.send_message("Your server is not setup please run `/setup`", ephemeral=True)
@@ -53,18 +52,16 @@ class Config(commands.Cog):
             self.db.edit_staff_role(ctx.guild.id, staff_role.id)
         if mute_role is not None:
             self.db.edit_role(ctx.guild.id, mute_role.id)
-        if ticket_category is not None:
-            self.db.edit_ticket_category(ctx.guild.id, ticket_category.id)
         await ctx.response.send_message("Config updated", ephemeral=True)
 
     @app_commands.command(name="setup", description="Setup the bot")
     @app_commands.checks.has_permissions(manage_guild=True)
-    async def setup(self, ctx, log_channel: discord.TextChannel, report_channel: discord.TextChannel, mute_role: discord.Role, staff_role: discord.Role, ticket_category: discord.CategoryChannel):
+    async def setup(self, ctx, log_channel: discord.TextChannel, report_channel: discord.TextChannel, mute_role: discord.Role, staff_role: discord.Role):
         data = self.db.get_config(ctx.guild.id)
         if data is not None:
          await ctx.response.send_message("Your server is already setup", ephemeral=True)
          return
-        self.db.add_config(ctx.guild.id, log_channel.id, report_channel.id, mute_role.id, staff_role.id, ticket_category.id)
+        self.db.add_config(ctx.guild.id, log_channel.id, report_channel.id, mute_role.id, staff_role.id,)
         await ctx.response.send_message("Your server has been setup", ephemeral=True)
 
 async def setup(bot):

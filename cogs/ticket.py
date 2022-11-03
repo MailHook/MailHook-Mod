@@ -18,17 +18,17 @@ class Ticket(commands.Cog):
     @support.command(name="create", description="Create a support ticket")
     async def create(self, ctx):
         """This is not ready for use"""
-        data = self.db.get_config(ctx.guild.id)
+        data = self.db.ticket_config(ctx.guild.id)
         if data is None:
-            await ctx.response.send_message("Your server is not setup please run `/setup`", ephemeral=True)
+            await ctx.response.send_message("Your server is not setup please run `/support setup`", ephemeral=True)
             return
-        category = discord.utils.get(ctx.guild.categories, id=data[5])
+        category = discord.utils.get(ctx.guild.categories, id=data[1])
         if category is None:
-            await ctx.response.send_message("The ticket category is not set please run `/editconfig ticket_category`", ephemeral=True)
+            await ctx.response.send_message("The ticket category is not set please run `/support editconfig category`", ephemeral=True)
             return
-        role = discord.utils.get(ctx.guild.roles, id=data[4])
+        role = discord.utils.get(ctx.guild.roles, id=data[2])
         if role is None:
-            await ctx.response.send_message("The staff role is not set please run `/editconfig staff_role`", ephemeral=True)
+            await ctx.response.send_message("The staff role is not set please run `/support editconfig staff_role`", ephemeral=True)
             return
         overwrites = {
             ctx.guild.default_role: discord.PermissionOverwrite(read_messages=False),
@@ -42,7 +42,7 @@ class Ticket(commands.Cog):
         msg = f"{role.mention} a new ticket has been created by {ctx.user.mention}!"
         embed = discord.Embed(
             title="Ticket Created",
-            description=f"Ticket ID: {ctx.user.id}",
+            description=f"{data[3]}",
             color=ctx.user.color
         )
         embed.set_footer(text=f"Ticket by: {ctx.user.name}", icon_url=ctx.user.avatar.url)
@@ -55,23 +55,31 @@ class Ticket(commands.Cog):
     @support.command(name="close", description="Close a ticket")
     @app_commands.checks.has_permissions(manage_messages=True)
     async def close(self, ctx):
-        data = self.db.get_config(ctx.guild.id)
+        data = self.db.ticket_config(ctx.guild.id)
         ticket_data = self.db.get_ticket(ctx.guild.id, ctx.channel.id)
         if data is None:
             await ctx.response.send_message("Your server is not setup please run `/setup`", ephemeral=True)
             return
-        category = discord.utils.get(ctx.guild.categories, id=data[5])
+        category = discord.utils.get(ctx.guild.categories, id=data[1])
         if category is None:
             await ctx.response.send_message("The ticket category is not set please run `/editconfig ticket_category`", ephemeral=True)
             return
         if ticket_data is None:
             await ctx.response.send_message("This is not a ticket channel", ephemeral=True)
             return
-        self.db.close_ticket(guild_id=ctx.guild.id, channel_id=ctx.channel.id)
+        # before closing the ticket send a message to the user
+        close_message = "It seems like your ticket has been closed. If you have any more questions please create a new ticket."
+        user = discord.utils.get(ctx.guild.members, id=ticket_data[2])
+        await user.send(content=close_message)
+        try:
+         self.db.close_ticket(guild_id=ctx.guild.id, channel_id=ctx.channel.id)
+        except:
+            await ctx.response.send_message("This is not a ticket channel", ephemeral=True)
+            return
         await ctx.channel.delete()
 
     # assign a ticket to a staff member
-    @support.command(name="assign", description="Assign a ticket to a staff member (only staff can use this)")
+    @support.command(name="assign", description="Assign a ticket to a staff member (This commmand is optional)")
     @app_commands.checks.has_permissions(manage_messages=True)
     async def assign(self, ctx, staff: discord.Member):
         """This is not ready for use"""
@@ -90,7 +98,73 @@ class Ticket(commands.Cog):
             await ctx.response.send_message(f"User has been assigened", ephemeral=True)
             channel = self.bot.get_channel(ctx.channel.id)
             await channel.send(f"Ticket reassigned to {staff.mention}")
-# eror handling for support commands
+
+    @support.command(name="config", description="View the ticket config")
+    @app_commands.checks.has_permissions(manage_guild=True)
+    async def config(self, ctx):
+        data = self.db.ticket_config(ctx.guild.id)
+        if data is None:
+            await ctx.response.send_message("Your server is not setup please run `/support setup`", ephemeral=True)
+            return
+        role = discord.utils.get(ctx.guild.roles, id=data[2])
+        category = discord.utils.get(ctx.guild.categories, id=data[1])
+        embed = discord.Embed(
+            title="Ticket Config",
+            description=f"Ticket category: {category.name}\nStaff role: {role.mention}\nTicket message: {data[3]}",
+            color=ctx.user.color
+        )
+        embed.set_footer(text=f"Ticket config by: {ctx.user.name}", icon_url=ctx.user.avatar.url)
+        embed.timestamp = datetime.datetime.now()
+        await ctx.response.send_message(embed=embed)
+
+    @support.command(name="editconfig", description="Edit the ticket config")
+    @app_commands.checks.has_permissions(manage_guild=True)
+    @app_commands.describe(category="Tickets will be made in this category ", staff_role="The role to ping when a ticket is created", ticket_message="The message to send when a ticket is created")
+    async def editconfig(self, ctx, category: discord.CategoryChannel = None, staff_role: discord.Role = None, ticket_message: str = None):
+        if category is None and staff_role is None and ticket_message is None:
+            await ctx.response.send_message("You need to provide a category, staff role or ticket message", ephemeral=True)
+            return
+        data = self.db.ticket_config(ctx.guild.id)
+        if data is None:
+            await ctx.response.send_message("Your server is not setup please run `/support setup`", ephemeral=True)
+            return
+        if category is not None:
+            self.db.edit_ticket_config(ctx.guild.id, category.id, data[2], data[3])
+        if staff_role is not None:
+            self.db.edit_ticket_config(ctx.guild.id, data[1], staff_role.id, data[3])
+        if ticket_message is not None:
+            self.db.edit_ticket_config(ctx.guild.id, data[1], data[2], ticket_message)
+        await ctx.response.send_message("Config updated", ephemeral=True)
+
+    
+    @support.command(name="setup", description="Setup the ticket system")
+    @app_commands.checks.has_permissions(manage_guild=True)
+    async def setup(self, ctx):
+        # make sure the server is not setup and then setup the server
+        data = self.db.get_config(ctx.guild.id)
+        if data is None:
+            # not setup
+            await ctx.response.send_message("Your server is not setup please run `/setup`", ephemeral=True)
+            return
+        ticket_data = self.db.ticket_config(ctx.guild.id)
+        if ticket_data is None:
+            # make a category and a set the staff role from data
+            category = await ctx.guild.create_category("Tickets")
+            # setp perm for category
+            overwrites = {
+                ctx.guild.default_role: discord.PermissionOverwrite(read_messages=False),
+                ctx.user: discord.PermissionOverwrite(read_messages=True),
+                # add staff role
+                ctx.guild.get_role(data[4]): discord.PermissionOverwrite(read_messages=True)
+            }
+            await category.edit(overwrites=overwrites)
+            print(data[4])
+            start_msg = "A staff member will be with you shortly, In the mean time please describe your issue as best as you can."
+            self.db.create_ticket_config(guild_id=ctx.guild.id, category_id=category.id, role_id=data[4], start_message=start_msg)
+            await ctx.response.send_message("Ticket system setup", ephemeral=True)
+        else:
+            await ctx.response.send_message("Ticket system is already setup", ephemeral=True)
+
     @assign.error
     async def support_error(self, ctx: discord.Integration, error):
         if isinstance(error, discord.app_commands.errors.MissingPermissions):
@@ -98,6 +172,7 @@ class Ticket(commands.Cog):
         elif isinstance(error, discord.app_commands.errors.CommandLimitReached):
             await ctx.response.send_message(embed=error_embed("Error:x:", "You can only edit one setting at a time")) # type: ignore
         else:
+            print(error)
             await ctx.response.send_message(embed=error_embed("Error:x:", "An error has occured"))
 
     @create.error
@@ -107,6 +182,7 @@ class Ticket(commands.Cog):
         elif isinstance(error, discord.app_commands.errors.CommandLimitReached):
             await ctx.response.send_message(embed=error_embed("Error:x:", "You can only edit one setting at a time"))
         else:
+            print(error)
             await ctx.response.send_message(embed=error_embed("Error:x:", "An error has occured"))
 
     @close.error
@@ -116,6 +192,7 @@ class Ticket(commands.Cog):
         elif isinstance(error, discord.app_commands.errors.CommandLimitReached):
             await ctx.response.send_message(embed=error_embed("Error:x:", "You can only edit one setting at a time"))
         else:
+            print(error)
             await ctx.response.send_message(embed=error_embed("Error:x:", "An error has occured"))
 
 async def setup(bot):
