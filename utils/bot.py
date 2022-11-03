@@ -1,4 +1,3 @@
-from ast import Num
 import logging
 import logging.handlers
 from aiohttp import ClientSession
@@ -46,7 +45,6 @@ class ModBot(commands.Bot):
 
         for extension in self.initial_extensions:
             await self.load_extension(f"cogs.{extension}")
-        await self.load_extension('jishaku')
 
         # if debug is enabled, then don't sync slash commands
         if not self.debug:
@@ -67,7 +65,8 @@ async def main():
     intents.emojis_and_stickers = True
     intents.bans = True
     intents.webhooks = True
-    ext = ['moderation', 'errors', 'config', 'level', 'info', 'case', 'ticket']
+    intents.presences = False
+    ext = ['moderation', 'errors', 'config', 'level', 'info', 'case', 'ticket', 'events']
     async with ClientSession() as server_client:
      async with ModBot(debug=False, command_prefix="!", allowed_mentions=discord.AllowedMentions(everyone=False, roles=True, users=True, replied_user=True),  activity=discord.Game("Working on it"), client=server_client, intents=intents, help_command=None, initial_cogs=ext) as bot:
       token = os.getenv("DISCORD_TOKEN")

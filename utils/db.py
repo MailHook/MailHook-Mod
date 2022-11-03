@@ -18,6 +18,15 @@ class Database():
 
     ###########################################
 
+    def remove_guild(self, guild_id: int):
+        # remove everything that has this guild id
+        self.con.execute("DELETE FROM server_config WHERE guild_id = ?", (guild_id,))
+        self.con.execute("DELETE FROM levels WHERE guild_id = ?", (guild_id,))
+        self.con.execute("DELETE FROM roles WHERE guild_id = ?", (guild_id,))
+        self.con.execute("DELETE FROM tickets WHERE guild_id = ?", (guild_id,))
+        self.con.execute("DELETE FROM ticket_config WHERE guild_id = ?", (guild_id,))
+        self.con.commit()
+
     def add_case(self, case_id: int, guild_id: int, user_id: int, moderator_id: int, reason: str, case_type: str, timestamp: str):
         self.con.execute("INSERT INTO reports VALUES (?, ?, ?, ?, ?, ?, ?)", (case_id, guild_id, user_id, moderator_id, reason, case_type, timestamp))
         self.con.commit()

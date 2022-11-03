@@ -33,8 +33,11 @@ class Info(commands.Cog):
         embed.add_field(name="ID", value=member.id, inline=False)
         embed.add_field(name="Created At", value=f"<t:{int(time.mktime(member.created_at.timetuple()))}>", inline=False)
         embed.add_field(name="Joined At", value=f"<t:{int(time.mktime(member.joined_at.timetuple()))}>", inline=False)
+        roles = [role.mention for role in member.roles]
+        if roles == []:
+            roles = "None"
+        embed.add_field(name="Roles", value=" ".join(roles[::-1]), inline=False)
         embed.set_thumbnail(url=member.avatar.url)
         await ctx.response.send_message(embeds=[embed], ephemeral=True)
-
 async def setup(bot):
     await bot.add_cog(Info(bot))
