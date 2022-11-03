@@ -19,8 +19,9 @@ class Info(commands.Cog):
         embed.add_field(name="Owner", value=guild.owner, inline=False)
         embed.add_field(name="Members", value=guild.member_count, inline=False)
         # we want the creation time to be in a readable format using discords timestamp function and the time module like this: <t:1627380000>
-        embed.add_field(name="Created At", value=f"<t:{int(time.mktime(guild.created_at.timetuple()))}>", inline=False)
-        #embed.add_field(name="Created At", value=guild.created_at.strftime("%a, %#d %B %Y, %I:%M %p UTC"))
+        crated_at = discord.utils.format_dt(guild.created_at, style="F")
+        embed.add_field(name="Created At", value=crated_at, inline=False)
+        #embed.add_field(name="Created At", value=f"<t:{int(time.mktime(guild.created_at.timetuple()))}>", inline=False)
         embed.set_thumbnail(url=guild.icon.url)
         await ctx.response.send_message(embeds=[embed], ephemeral=True)
 
@@ -31,8 +32,12 @@ class Info(commands.Cog):
         embed = discord.Embed(title="User Info", color=discord.Color.blurple())
         embed.add_field(name="Name", value=member.name, inline=False)
         embed.add_field(name="ID", value=member.id, inline=False)
-        embed.add_field(name="Created At", value=f"<t:{int(time.mktime(member.created_at.timetuple()))}>", inline=False)
-        embed.add_field(name="Joined At", value=f"<t:{int(time.mktime(member.joined_at.timetuple()))}>", inline=False)
+        #embed.add_field(name="Created At", value=f"<t:{int(time.mktime(member.created_at.timetuple()))}>", inline=False)
+        made_time = discord.utils.format_dt(member.created_at, style="F")
+        embed.add_field(name="Created At", value=made_time, inline=False)
+        joined_time = discord.utils.format_dt(member.joined_at, style="F")
+        embed.add_field(name="Joined At", value=joined_time, inline=False)
+        #embed.add_field(name="Joined At", value=f"<t:{int(time.mktime(member.joined_at.timetuple()))}>", inline=False)
         roles = [role.mention for role in member.roles]
         if roles == []:
             roles = "None"

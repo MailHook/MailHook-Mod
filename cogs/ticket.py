@@ -5,7 +5,7 @@ from discord import app_commands
 from utils.bot import ModBot
 from utils.db import Database
 from utils.embed import error_embed
-
+from utils.buttons import TicketButton
 
 # NOTE: dont know how to implement buttons. pls teach sensei.
 
@@ -13,6 +13,12 @@ class Ticket(commands.Cog):
     def __init__(self, bot: ModBot):
         self.bot = bot
         self.db = Database()
+
+    @commands.Cog.listener("on_ready")
+    async def on_ready(self):
+        # add buttons
+        self.bot.add_view(TicketButton())
+
     support = app_commands.Group(name="support", description="Support commands")
 
     @support.command(name="create", description="Create a support ticket")
@@ -30,8 +36,17 @@ class Ticket(commands.Cog):
         if role is None:
             await ctx.response.send_message("The staff role is not set please run `/support editconfig staff_role`", ephemeral=True)
             return
-        if self.db.ticket_exists(ctx.guild.id, ctx.user.id):
-            await ctx.response.send_message("You already have a ticket open", ephemeral=True)
+        does_it = self.db.ticket_exists(ctx.guild.id, ctx.user.id)
+        if does_it is not None:
+            channel = discord.utils.get(ctx.guild.channels, id=does_it[1])
+            if channel is None:
+                # make a new channel
+                new_channel = await ctx.guild.create_text_channel(f"ticket-{ctx.user.id}", category=category)
+                await new_channel.send(f"{role.mention} {ctx.user.mention} has opened a ticket!", view=TicketButton())
+                self.db.create_ticket(guild_id=ctx.guild.id, channel_id=new_channel.id, user_id=ctx.user.id, staff_id=10)
+                await ctx.response.send_message(f"Your ticket has been created! {new_channel.mention}", ephemeral=True)
+                return
+            await ctx.response.send_message(f"You already have a ticket open {channel.mention}", ephemeral=True)
             return
         overwrites = {
             ctx.guild.default_role: discord.PermissionOverwrite(read_messages=False),
@@ -50,7 +65,7 @@ class Ticket(commands.Cog):
         )
         embed.set_footer(text=f"Ticket by: {ctx.user.name}", icon_url=ctx.user.avatar.url)
         embed.timestamp = datetime.datetime.now()
-        await channel.send(content = msg, embed=embed)
+        await channel.send(content = msg, embed=embed, view=TicketButton())
 
         await ctx.response.send_message(f"Ticket created: {channel.mention}", ephemeral=True)
 
@@ -65,7 +80,7 @@ class Ticket(commands.Cog):
             return
         category = discord.utils.get(ctx.guild.categories, id=data[1])
         if category is None:
-            await ctx.response.send_message("The ticket category is not set please run `/editconfig ticket_category`", ephemeral=True)
+            await ctx.response.send_message("The ticket category is not set please run `/support editconfig category`", ephemeral=True)
             return
         if ticket_data is None:
             await ctx.response.send_message("This is not a ticket channel", ephemeral=True)
