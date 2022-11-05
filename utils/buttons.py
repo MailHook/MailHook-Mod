@@ -35,7 +35,7 @@ class ConfirmButton(discord.ui.View):
 class TicketButton(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
-        self.yes = False
+        #self.yes = False
         self.db = Database()
 
     # add callback so the ticket owner can only close the ticket
@@ -46,9 +46,10 @@ class TicketButton(discord.ui.View):
         await i.response.send_message(txt, view=view, ephemeral=True)
         await view.wait()
         # if the user clicked yes then close the ticket if not send a message saying the ticket is not closed
-        if view.yes:
+        if view.yes is True:
+            print("Closing ticket")
+            self.db.close_ticket(guild_id=i.guild.id, channel_id=i.channel.id)
             await i.channel.delete()
-            self.db.close_ticket(i.guild.id, i.channel.id)
         else:
             # edit the message to say cancelled
             return

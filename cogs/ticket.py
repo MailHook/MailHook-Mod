@@ -37,16 +37,33 @@ class Ticket(commands.Cog):
             await ctx.response.send_message("The staff role is not set please run `/support editconfig staff_role`", ephemeral=True)
             return
         does_it = self.db.ticket_exists(ctx.guild.id, ctx.user.id)
-        if does_it is not None:
+        if does_it:
             channel = discord.utils.get(ctx.guild.channels, id=does_it[1])
+            # check if the channel is deleted
             if channel is None:
-                # make a new channel
-                new_channel = await ctx.guild.create_text_channel(f"ticket-{ctx.user.id}", category=category)
-                await new_channel.send(f"{role.mention} {ctx.user.mention} has opened a ticket!", view=TicketButton())
-                self.db.create_ticket(guild_id=ctx.guild.id, channel_id=new_channel.id, user_id=ctx.user.id, staff_id=10)
-                await ctx.response.send_message(f"Your ticket has been created! {new_channel.mention}", ephemeral=True)
+                # if the channel is deleted then delete the ticket from the database
+                self.db.close_ticket(ctx.guild.id, does_it[1])
+                # make a new ticket
+                overwrites = {
+                ctx.guild.default_role: discord.PermissionOverwrite(read_messages=False),
+                ctx.user: discord.PermissionOverwrite(read_messages=True),
+                # add staff role
+                role: discord.PermissionOverwrite(read_messages=True)
+                }
+                channel = await ctx.guild.create_text_channel(f"ticket-{ctx.user.id}", category=category, overwrites=overwrites)
+                self.db.create_ticket(guild_id=ctx.guild.id, channel_id=channel.id, user_id=ctx.user.id, staff_id=10)
+                msg = f"{role.mention} a new ticket has been created by {ctx.user.mention}!"
+                embed = discord.Embed(
+                  title="Ticket Created",
+                  description=f"{data[3]}",
+                  color=ctx.user.color
+                )
+                embed.set_footer(text=f"Ticket by: {ctx.user.name}", icon_url=ctx.user.avatar.url)
+                embed.timestamp = datetime.datetime.now()
+                await channel.send(content = msg, embed=embed, view=TicketButton())
+                await ctx.response.send_message(f"Your ticket has been created {channel.mention}", ephemeral=True)
                 return
-            await ctx.response.send_message(f"You already have a ticket open {channel.mention}", ephemeral=True)
+            await ctx.response.send_message("You have a ticket open", ephemeral=True)
             return
         overwrites = {
             ctx.guild.default_role: discord.PermissionOverwrite(read_messages=False),
