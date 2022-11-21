@@ -58,7 +58,7 @@ class Level_System(commands.Cog):
         self.db.add_role(ctx.guild.id, role.id, level)
         await ctx.response.send_message(f"Level {level} role has been set to {role.mention}", ephemeral=True)
 
-    @app_commands.command(name="get-level-roles", description="Gets the level roles")
+    @app_commands.command(name="level-roles", description="Gets the level roles")
     @app_commands.checks.has_permissions(manage_guild=True)
     async def get_level_roles(self, ctx: discord.Integration):
         data = self.db.get_roles(ctx.guild.id)
@@ -91,14 +91,6 @@ class Level_System(commands.Cog):
     async def leaderboard(self, ctx: discord.Integration):
         await self.level_core.leaderboard(ctx)
 
-    @level.command(name="setlevel", description="Sets your level")
-    async def setlevel(self, ctx: discord.Integration, level: int):
-        if level > self.max_level:
-            await ctx.response.send_message("You can't set level higher than the max level!", ephemeral=True)
-            return
-        self.db.update_level(ctx.guild.id, ctx.user.id, level, 0)
-        await ctx.response.send_message(f"Your level has been set to {level}", ephemeral=True)
-
     @level.command(name="set-level", description="Sets the level for a user")
     @app_commands.describe(user="The user to set the level for", level="The level to set")
     @app_commands.checks.has_permissions(manage_guild=True)
@@ -123,6 +115,13 @@ class Level_System(commands.Cog):
         user_id = user.id
         self.db.delete_level(ctx.guild.id, user_id)
         await ctx.response.send_message(f"{user} has been reset!", ephemeral=True)
+
+    
+    @level.command(name="set-message", description="Sets the level message")
+    @app_commands.checks.has_permissions(manage_guild=True)
+    @app_commands.describe(message="The message to set")
+    async def set_message(self, ctx: discord.Integration, message: str):
+        await self.level_core.set_message(ctx, message)
 
 async def setup(bot):
     await bot.add_cog(Level_System(bot))

@@ -1,7 +1,6 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
-import time
 
 class Info(commands.Cog):
     def __init__(self, bot):
@@ -44,5 +43,6 @@ class Info(commands.Cog):
         embed.add_field(name="Roles", value=" ".join(roles[::-1]), inline=False)
         embed.set_thumbnail(url=member.avatar.url)
         await ctx.response.send_message(embeds=[embed], ephemeral=True)
+
 async def setup(bot):
     await bot.add_cog(Info(bot))

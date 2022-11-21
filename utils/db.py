@@ -8,7 +8,7 @@ class Database():
         # server_config table
         self.con.execute("CREATE TABLE IF NOT EXISTS server_config (guild_id INTEGER, log_channel_id INTEGER, reports_channel_id INTEGER, role_id INTEGER, staff_role_id INTEGER)")
         # level table
-        self.con.execute("CREATE TABLE IF NOT EXISTS levels (guild_id INTEGER, user_id INTEGER, level INTEGER, xp INTEGER)")
+        self.con.execute("CREATE TABLE IF NOT EXISTS levels (guild_id INTEGER, user_id INTEGER, level INTEGER, xp INTEGER, message TEXT)")
         # roles table
         self.con.execute("CREATE TABLE IF NOT EXISTS roles (guild_id INTEGER, role_id INTEGER, level INTEGER)")
         # ticket table
@@ -70,6 +70,10 @@ class Database():
 
     def delete_level(self, guild_id: int, user_id: int):
         self.con.execute("DELETE FROM levels WHERE guild_id = ? AND user_id = ?", (guild_id, user_id))
+        self.con.commit()
+
+    def level_message(self, guild_id: int, message: str):
+        self.con.execute("UPDATE levels SET message = ? WHERE guild_id = ?", (message, guild_id))
         self.con.commit()
 
     def add_role(self, guild_id: int, role_id: int, level: int):

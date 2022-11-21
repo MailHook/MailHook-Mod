@@ -30,6 +30,8 @@ from .bot import ModBot
 from .db import Database
 
 no_xp_list = []
+custom_level_up_messages = []
+guild_level_up_messages = {}
 
 class Level_core():
     def __init__(self, bot: ModBot):
@@ -75,12 +77,36 @@ class Level_core():
                     await message.channel.send(f"Congrats {message.author.mention}, you have reached max level!")
                 else:
                  await self.level_role_reward(message, level=level)
-                 await message.channel.send(f"{message.author.mention} has leveled up to level {level}!", delete_after=10)
-                # use update level
+                 #await message.channel.send(f"{message.author.mention} has leveled up to level {level}!", delete_after=10)
+                 msg = await self.find_message(message, level=level)
+                 await message.channel.send(msg, delete_after=10)
+
             self.db.update_level(guild_id, user_id, level, xp)
-            no_xp_list.append(user_id)
-            await asyncio.sleep(5)
-            no_xp_list.remove(user_id)
+            # no_xp_list.append(user_id)
+           # await asyncio.sleep(5)
+            # no_xp_list.remove(user_id)
+
+    async def set_message(self, ctx: discord.Integration, message: str):
+        # if message has the words [level] or [xp] then replace it with the {level} or {xp}
+        # now lets add the custom level up messages 
+        if "[level]" in message:
+            message = message.replace("[level]", "{level}")
+        if "[xp]" in message:
+            message = message.replace("[xp]", "{xp}")
+        # add the message to the list and add `` at the start and end
+        #custom_level_up_messages.append(f"f'{message}'")
+        # add guild id and message to the database
+        guild_level_up_messages[ctx.guild.id] = message
+        await ctx.response.send_message(f"Custom level up message set to ``{message}``")
+
+    async def find_message(self, ctx: discord.Message, level: int):
+        if ctx.guild.id in guild_level_up_messages:
+            message = guild_level_up_messages[ctx.guild.id]
+            if message is not None:
+                message = message.replace("{level}", str(level))
+                message = message.replace("{xp}", str(self.max_xp))
+                return message
+        return f"{ctx.author.mention} has leveled up to level {level}!"
 
     async def level_role_reward(self, ctx: discord.Message, level: int):
         data = self.db.get_role_by_level(ctx.guild.id, level)
