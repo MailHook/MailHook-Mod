@@ -247,9 +247,9 @@ Case Number: {case_number}
     async def clear(self, ctx, amount: int):
         await ctx.response.defer()
         if self.db.get_config(ctx.guild.id) is None:
-            return await ctx.response.send_message("Your server is not setup please run `/setup`", ephemeral=True)
+            return await ctx.followup.send("Your server is not setup please run `/setup`", ephemeral=True)
         if amount > 100:
-            return await ctx.response.send_message("You can only clear 100 messages at a time.", ephemeral=True)
+            return await ctx.followup.send("You can only clear 100 messages at a time.", ephemeral=True)
         await ctx.channel.purge(limit=amount)
         ctx.response.is_done()
 

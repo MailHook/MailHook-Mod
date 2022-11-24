@@ -8,7 +8,9 @@ class Database():
         # server_config table
         self.con.execute("CREATE TABLE IF NOT EXISTS server_config (guild_id INTEGER, log_channel_id INTEGER, reports_channel_id INTEGER, role_id INTEGER, staff_role_id INTEGER)")
         # level table
-        self.con.execute("CREATE TABLE IF NOT EXISTS levels (guild_id INTEGER, user_id INTEGER, level INTEGER, xp INTEGER, message TEXT)")
+        self.con.execute("CREATE TABLE IF NOT EXISTS levels (guild_id INTEGER, user_id INTEGER, level INTEGER, xp INTEGER)")
+        # custom message table
+        self.con.execute("CREATE TABLE IF NOT EXISTS level_messages (guild_id INTEGER, message TEXT)")
         # roles table
         self.con.execute("CREATE TABLE IF NOT EXISTS roles (guild_id INTEGER, role_id INTEGER, level INTEGER)")
         # ticket table
@@ -73,8 +75,12 @@ class Database():
         self.con.commit()
 
     def level_message(self, guild_id: int, message: str):
-        self.con.execute("UPDATE levels SET message = ? WHERE guild_id = ?", (message, guild_id))
+        # update or insert
+        self.con.execute("UPDATE level_messages SET message = ? WHERE guild_id = ?", (message, guild_id))
         self.con.commit()
+
+    def get_level_message(self, guild_id: int):
+        return self.con.execute("SELECT * FROM level_messages WHERE guild_id = ?", (guild_id,)).fetchone()
 
     def add_role(self, guild_id: int, role_id: int, level: int):
         # make a new table using the guild id and add the role and level to it to a colum, so you can have multiple roles per guild
